@@ -10,20 +10,8 @@
    ========================================================= */
 
 const TEACHER_PASSWORD = 'malabar@5445';
+
 const SESSION_KEY = 'mis-art-fest-teacher-session';
-
-
-/* =========================================================
-   SUPABASE CONNECTION CHECK
-   ========================================================= */
-
-if (
-    typeof supabaseClient === 'undefined'
-) {
-    console.error(
-        'Supabase client was not found. Make sure supabase.js is loaded before app.js.'
-    );
-}
 
 
 /* =========================================================
@@ -67,15 +55,15 @@ const HOUSE_INFO = {
    POINT SYSTEM
    =========================================================
 
-   INDIVIDUAL ITEMS
-   1st = 5 points
-   2nd = 3 points
-   3rd = 1 point
+   INDIVIDUAL:
+   1st = 5
+   2nd = 3
+   3rd = 1
 
-   GROUP ITEMS
-   1st = 10 points
-   2nd = 5 points
-   3rd = 3 points
+   GROUP:
+   1st = 10
+   2nd = 5
+   3rd = 3
 
    ========================================================= */
 
@@ -97,7 +85,7 @@ const POINTS = {
 
 
 /* =========================================================
-   GET POINTS FOR A RESULT
+   GET POINTS
    ========================================================= */
 
 function getPoints(activityType, place) {
@@ -153,25 +141,6 @@ const SECTION_INFO = {
 
 /* =========================================================
    PROGRAM DATABASE
-   =========================================================
-
-   IMPORTANT:
-
-   LP-1 and LP-2 exist ONLY in OFF-STAGE.
-
-   ON-STAGE contains:
-   UP
-   HS
-   HSS
-   GENERAL
-
-   GENERAL is an independent category.
-
-   GENERAL DOES NOT HAVE:
-   - HS
-   - HSS
-   - HS/HSS selector
-
    ========================================================= */
 
 const PROGRAMS = {
@@ -196,7 +165,6 @@ const PROGRAMS = {
 
         ],
 
-
         LP2: [
 
             {
@@ -220,7 +188,6 @@ const PROGRAMS = {
             }
 
         ],
-
 
         UP: [
 
@@ -281,7 +248,6 @@ const PROGRAMS = {
 
         ],
 
-
         HS: [
 
             {
@@ -340,7 +306,6 @@ const PROGRAMS = {
             }
 
         ],
-
 
         HSS: [
 
@@ -447,7 +412,6 @@ const PROGRAMS = {
 
         ],
 
-
         HS: [
 
             {
@@ -542,7 +506,6 @@ const PROGRAMS = {
 
         ],
 
-
         HSS: [
 
             {
@@ -597,7 +560,6 @@ const PROGRAMS = {
 
         ],
 
-
         /* =================================================
            GENERAL
            ================================================= */
@@ -627,56 +589,6 @@ const PROGRAMS = {
     }
 
 };
-
-
-/* =========================================================
-   DEFAULT RESULTS
-   =========================================================
-
-   These are kept only as reference/demo data.
-   LIVE RESULTS COME FROM SUPABASE.
-
-   ========================================================= */
-
-const DEFAULT_RESULTS = [
-
-    {
-        id: 'result-1',
-        name: 'Aisha Rahman',
-        studentClass: 'Class VIII',
-        section: 'HS',
-        activityType: 'individual',
-        programCategory: 'off-stage',
-        event: 'Water Colouring',
-        team: 'green',
-        place: 'first'
-    },
-
-    {
-        id: 'result-2',
-        name: 'Ibrahim N.',
-        studentClass: 'Class XI',
-        section: 'HSS',
-        activityType: 'individual',
-        programCategory: 'on-stage',
-        event: 'Light Music — Boys',
-        team: 'red',
-        place: 'second'
-    },
-
-    {
-        id: 'result-3',
-        name: 'Meera Thomas',
-        studentClass: 'Class VII',
-        section: 'UP',
-        activityType: 'individual',
-        programCategory: 'on-stage',
-        event: 'Poem Recitation — Malayalam',
-        team: 'blue',
-        place: 'first'
-    }
-
-];
 
 
 /* =========================================================
@@ -778,10 +690,11 @@ function sectionFullName(section) {
 
 
 /* =========================================================
-   RESULT DATA — SUPABASE VERSION
+   SUPABASE RESULT DATA
    ========================================================= */
 
 let RESULTS_CACHE = [];
+
 let RESULTS_LOADED = false;
 
 
@@ -831,16 +744,6 @@ function normaliseResult(item) {
         );
 
 
-    const activity =
-        item.activityType ??
-        item.activity_type;
-
-
-    const stage =
-        item.programCategory ??
-        item.program_category;
-
-
     return {
 
         id: String(
@@ -860,24 +763,30 @@ function normaliseResult(item) {
         ),
 
         section:
-            validSections.includes(
-                item.section
-            )
+            validSections.includes(item.section)
                 ? item.section
                 : 'HS',
 
         activityType:
             validActivities.includes(
-                activity
+                item.activityType ??
+                item.activity_type
             )
-                ? activity
+                ? (
+                    item.activityType ??
+                    item.activity_type
+                )
                 : 'individual',
 
         programCategory:
             validStages.includes(
-                stage
+                item.programCategory ??
+                item.program_category
             )
-                ? stage
+                ? (
+                    item.programCategory ??
+                    item.program_category
+                )
                 : 'on-stage',
 
         event: String(
@@ -886,23 +795,17 @@ function normaliseResult(item) {
         ),
 
         team:
-            validTeams.includes(
-                item.team
-            )
+            validTeams.includes(item.team)
                 ? item.team
                 : 'red',
 
         place:
-            validPlaces.includes(
-                item.place
-            )
+            validPlaces.includes(item.place)
                 ? item.place
                 : 'third',
 
         participantCount:
-            Number.isFinite(
-                participantCount
-            ) &&
+            Number.isFinite(participantCount) &&
             participantCount > 0
                 ? participantCount
                 : null
@@ -933,18 +836,30 @@ async function loadResults() {
 
     try {
 
+        if (
+            typeof supabaseClient === 'undefined'
+        ) {
+
+            throw new Error(
+                'supabaseClient is not available. Check supabase.js and script order.'
+            );
+
+        }
+
+
         const {
             data,
             error
-        } = await supabaseClient
-            .from('results')
-            .select('*')
-            .order(
-                'created_at',
-                {
-                    ascending: false
-                }
-            );
+        } =
+            await supabaseClient
+                .from('results')
+                .select('*')
+                .order(
+                    'created_at',
+                    {
+                        ascending: false
+                    }
+                );
 
 
         if (error) {
@@ -1002,9 +917,11 @@ async function saveResult(item) {
 
     const databaseRow = {
 
-        id: result.id,
+        id:
+            result.id,
 
-        name: result.name,
+        name:
+            result.name,
 
         student_class:
             result.studentClass,
@@ -1036,13 +953,14 @@ async function saveResult(item) {
     const {
         data,
         error
-    } = await supabaseClient
-        .from('results')
-        .insert([
-            databaseRow
-        ])
-        .select()
-        .single();
+    } =
+        await supabaseClient
+            .from('results')
+            .insert([
+                databaseRow
+            ])
+            .select()
+            .single();
 
 
     if (error) {
@@ -1080,13 +998,14 @@ async function deleteResult(id) {
 
     const {
         error
-    } = await supabaseClient
-        .from('results')
-        .delete()
-        .eq(
-            'id',
-            id
-        );
+    } =
+        await supabaseClient
+            .from('results')
+            .delete()
+            .eq(
+                'id',
+                id
+            );
 
 
     if (error) {
@@ -1115,6 +1034,19 @@ async function deleteResult(id) {
    ========================================================= */
 
 function setupRealtimeResults() {
+
+    if (
+        typeof supabaseClient === 'undefined'
+    ) {
+
+        console.error(
+            'Realtime could not start because supabaseClient is missing.'
+        );
+
+        return;
+
+    }
+
 
     supabaseClient
         .channel(
@@ -1204,10 +1136,9 @@ function setupNav() {
     );
 
 
-    nav.querySelectorAll(
-        'a'
-    ).forEach(
-        link => {
+    nav
+        .querySelectorAll('a')
+        .forEach(link => {
 
             link.addEventListener(
                 'click',
@@ -1226,8 +1157,7 @@ function setupNav() {
                 }
             );
 
-        }
-    );
+        });
 
 }
 
@@ -1246,25 +1176,21 @@ function setupActiveNav() {
 
 
     document
-        .querySelectorAll(
-            '.nav a'
-        )
-        .forEach(
-            link => {
+        .querySelectorAll('.nav a')
+        .forEach(link => {
 
-                const page =
-                    link.getAttribute(
-                        'href'
-                    );
-
-
-                link.classList.toggle(
-                    'active',
-                    page === currentPage
+            const page =
+                link.getAttribute(
+                    'href'
                 );
 
-            }
-        );
+
+            link.classList.toggle(
+                'active',
+                page === currentPage
+            );
+
+        });
 
 }
 
@@ -1375,85 +1301,126 @@ function renderPublicResults() {
         results();
 
 
+    if (!items.length) {
+
+        list.innerHTML = '';
+
+
+        document
+            .querySelector(
+                '#empty-results'
+            )
+            ?.classList.remove(
+                'hidden'
+            );
+
+
+        setupResultFilters();
+
+        return;
+
+    }
+
+
     list.innerHTML =
-        items.map(
-            item => {
+        items
+            .map(
+                item => {
 
-                const house =
-                    HOUSE_INFO[item.team] ||
-                    HOUSE_INFO.red;
+                    const house =
+                        HOUSE_INFO[item.team] ||
+                        HOUSE_INFO.red;
 
 
-                return `
+                    return `
 
-                    <article
-                        class="result-row"
-                        data-section="${escapeHtml(item.section)}"
-                        data-activity="${escapeHtml(item.activityType)}"
-                        data-stage="${escapeHtml(item.programCategory)}"
-                    >
-
-                        <span
-                            class="place ${
-                                item.place === 'first'
-                                    ? 'first'
-                                    : ''
-                            }"
+                        <article
+                            class="result-row"
+                            data-section="${escapeHtml(item.section)}"
+                            data-activity="${escapeHtml(item.activityType)}"
+                            data-stage="${escapeHtml(item.programCategory)}"
                         >
-                            ${placeNumber(item.place)}
-                        </span>
+
+                            <span
+                                class="
+                                    place
+                                    ${
+                                        item.place === 'first'
+                                            ? 'first'
+                                            : ''
+                                    }
+                                "
+                            >
+                                ${placeNumber(item.place)}
+                            </span>
 
 
-                        <div>
+                            <div>
 
-                            <div class="student">
-                                ${escapeHtml(item.name)}
+                                <div class="student">
+                                    ${escapeHtml(item.name)}
+                                </div>
+
+
+                                <div class="meta">
+
+                                    ${stageLabel(
+                                        item.programCategory
+                                    )}
+
+                                    ·
+
+                                    ${sectionLabel(
+                                        item.section
+                                    )}
+
+                                    ·
+
+                                    ${escapeHtml(
+                                        item.studentClass
+                                    )}
+
+                                    ·
+
+                                    ${escapeHtml(
+                                        item.event
+                                    )}
+
+                                </div>
+
                             </div>
 
 
-                            <div class="meta">
-
-                                ${stageLabel(item.programCategory)}
-
-                                ·
-
-                                ${sectionLabel(item.section)}
-
-                                ·
-
-                                ${escapeHtml(item.studentClass)}
-
-                                ·
-
-                                ${escapeHtml(item.event)}
-
-                            </div>
-
-                        </div>
+                            <span
+                                class="
+                                    team-tag
+                                    ${house.tag}
+                                "
+                            >
+                                ${house.name}
+                            </span>
 
 
-                        <span
-                            class="team-tag ${house.tag}"
-                        >
-                            ${house.name.toUpperCase()}
-                        </span>
+                            <span class="result-type">
+                                ${titleCase(
+                                    item.activityType
+                                )}
+                            </span>
 
 
-                        <span class="result-type">
-                            ${titleCase(item.activityType)}
-                        </span>
+                            <strong>
+                                ${medal(
+                                    item.place
+                                )}
+                            </strong>
 
+                        </article>
 
-                        <strong>
-                            ${medal(item.place)}
-                        </strong>
+                    `;
 
-                    </article>
-
-                `;
-
-            }
-        ).join('');
+                }
+            )
+            .join('');
 
 
     setupResultFilters();
@@ -1814,9 +1781,7 @@ function pointsByHouse() {
                 if (
                     b[1] !== a[1]
                 ) {
-
                     return b[1] - a[1];
-
                 }
 
 
@@ -1865,8 +1830,7 @@ function renderChampionship() {
 
     const highest =
         Math.max(
-            standing[0]?.[1] ||
-                0,
+            standing[0]?.[1] || 0,
             1
         );
 
@@ -1876,7 +1840,10 @@ function renderChampionship() {
         leadingScore
     ] =
         standing[0] ||
-        ['red', 0];
+        [
+            'red',
+            0
+        ];
 
 
     const leader =
@@ -1901,7 +1868,9 @@ function renderChampionship() {
 
 
                 <h2>
-                    ${escapeHtml(leader.name)}
+                    ${escapeHtml(
+                        leader.name
+                    )}
                     is <em>in the lead.</em>
                 </h2>
 
@@ -1915,13 +1884,8 @@ function renderChampionship() {
 
 
             <strong class="champion-points">
-
                 ${leadingScore}
-
-                <small>
-                    PTS
-                </small>
-
+                <small>PTS</small>
             </strong>
 
         `;
@@ -1932,8 +1896,87 @@ function renderChampionship() {
     if (gallery) {
 
         gallery.innerHTML =
-            standing.map(
-                ([team, score], index) => {
+            standing
+                .map(
+                    (
+                        [team, score],
+                        index
+                    ) => {
+
+                        const house =
+                            HOUSE_INFO[team];
+
+
+                        return `
+
+                            <article
+                                class="
+                                    house-score-card
+                                    house-${team}
+                                "
+                            >
+
+                                <span>
+                                    0${index + 1}
+                                </span>
+
+
+                                <h3>
+                                    ${escapeHtml(
+                                        house.name
+                                    )}
+                                </h3>
+
+
+                                <strong>
+                                    ${score}
+                                    <small>PTS</small>
+                                </strong>
+
+
+                                <div>
+
+                                    <i
+                                        style="
+                                            width:${
+                                                Math.round(
+                                                    score /
+                                                    highest *
+                                                    100
+                                                )
+                                            }%
+                                        "
+                                    ></i>
+
+                                </div>
+
+
+                                <p>
+                                    ${
+                                        index === 0
+                                            ? 'Leading the way'
+                                            : `${leadingScore - score} points to the lead`
+                                    }
+                                </p>
+
+                            </article>
+
+                        `;
+
+                    }
+                )
+                .join('');
+
+    }
+
+
+    leaderboard.innerHTML =
+        standing
+            .map(
+                (
+                    [team, score],
+                    index
+                ) => {
 
                     const house =
                         HOUSE_INFO[team];
@@ -1942,131 +1985,73 @@ function renderChampionship() {
                     return `
 
                         <article
-                            class="house-score-card house-${team}"
+                            class="rank-row"
                         >
 
-                            <span>
+                            <span
+                                class="rank-number"
+                            >
                                 0${index + 1}
                             </span>
 
 
-                            <h3>
-                                ${escapeHtml(house.name)}
-                            </h3>
-
-
-                            <strong>
-
-                                ${score}
-
-                                <small>
-                                    PTS
-                                </small>
-
-                            </strong>
-
-
                             <div>
 
-                                <i
-                                    style="
-                                        width:${
-                                            Math.round(
-                                                score /
-                                                highest *
-                                                100
-                                            )
-                                        }%
-                                    "
-                                ></i>
+                                <strong>
+                                    ${escapeHtml(
+                                        house.name
+                                    )}
+                                </strong>
+
+
+                                <div
+                                    class="bar-wrap"
+                                >
+
+                                    <div
+                                        class="
+                                            bar
+                                            ${house.bar}
+                                        "
+                                        style="
+                                            width:${
+                                                Math.round(
+                                                    score /
+                                                    highest *
+                                                    100
+                                                )
+                                            }%
+                                        "
+                                    ></div>
+
+                                </div>
 
                             </div>
 
 
-                            <p>
+                            <span
+                                class="
+                                    team-tag
+                                    ${house.tag}
+                                "
+                            >
+                                ${house.label}
+                            </span>
 
-                                ${
-                                    index === 0
-                                        ? 'Leading the way'
-                                        : `${leadingScore - score} points to the lead`
-                                }
 
-                            </p>
+                            <strong
+                                class="rank-points"
+                            >
+                                ${score}
+                            </strong>
 
                         </article>
 
                     `;
 
                 }
-            ).join('');
-
-    }
-
-
-    leaderboard.innerHTML =
-        standing.map(
-            ([team, score], index) => {
-
-                const house =
-                    HOUSE_INFO[team];
-
-
-                return `
-
-                    <article class="rank-row">
-
-                        <span class="rank-number">
-                            0${index + 1}
-                        </span>
-
-
-                        <div>
-
-                            <strong>
-                                ${escapeHtml(house.name)}
-                            </strong>
-
-
-                            <div class="bar-wrap">
-
-                                <div
-                                    class="bar ${house.bar}"
-                                    style="
-                                        width:${
-                                            Math.round(
-                                                score /
-                                                highest *
-                                                100
-                                            )
-                                        }%
-                                    "
-                                ></div>
-
-                            </div>
-
-                        </div>
-
-
-                        <span
-                            class="
-                                team-tag
-                                ${house.tag}
-                            "
-                        >
-                            ${house.label}
-                        </span>
-
-
-                        <strong class="rank-points">
-                            ${score}
-                        </strong>
-
-                    </article>
-
-                `;
-
-            }
-        ).join('');
+            )
+            .join('');
 
 }
 
@@ -2075,7 +2060,8 @@ function renderChampionship() {
    TEACHER PORTAL
    ========================================================= */
 
-let selectedTeacherProgram = null;
+let selectedTeacherProgram =
+    null;
 
 
 /* =========================================================
@@ -2111,15 +2097,26 @@ function programButton(
             data-program-index="${index}"
         >
 
-            <span class="teacher-program-number">
-                ${String(index + 1).padStart(2, '0')}
+            <span
+                class="teacher-program-number"
+            >
+                ${String(
+                    index + 1
+                ).padStart(
+                    2,
+                    '0'
+                )}
             </span>
 
 
-            <span class="teacher-program-content">
+            <span
+                class="teacher-program-content"
+            >
 
                 <strong>
-                    ${escapeHtml(program.name)}
+                    ${escapeHtml(
+                        program.name
+                    )}
                 </strong>
 
 
@@ -2138,7 +2135,9 @@ function programButton(
             </span>
 
 
-            <span class="teacher-program-arrow">
+            <span
+                class="teacher-program-arrow"
+            >
                 →
             </span>
 
@@ -2165,13 +2164,19 @@ function sectionProgramCard(
 
     return `
 
-        <article class="teacher-section-card">
+        <article
+            class="teacher-section-card"
+        >
 
-            <div class="teacher-section-heading">
+            <div
+                class="teacher-section-heading"
+            >
 
                 <div>
 
-                    <span class="teacher-section-code">
+                    <span
+                        class="teacher-section-code"
+                    >
                         ${info.label}
                     </span>
 
@@ -2183,8 +2188,9 @@ function sectionProgramCard(
                 </div>
 
 
-                <span class="teacher-program-count">
-
+                <span
+                    class="teacher-program-count"
+                >
                     ${programs.length}
 
                     ${
@@ -2192,13 +2198,14 @@ function sectionProgramCard(
                             ? 'program'
                             : 'programs'
                     }
-
                 </span>
 
             </div>
 
 
-            <div class="teacher-program-list">
+            <div
+                class="teacher-program-list"
+            >
 
                 ${
                     programs.length
@@ -2217,7 +2224,9 @@ function sectionProgramCard(
                             )
                             .join('')
                         : `
-                            <div class="teacher-empty-programs">
+                            <div
+                                class="teacher-empty-programs"
+                            >
                                 No programs configured.
                             </div>
                         `
@@ -2250,11 +2259,15 @@ function generalProgramCard(
             "
         >
 
-            <div class="teacher-section-heading">
+            <div
+                class="teacher-section-heading"
+            >
 
                 <div>
 
-                    <span class="teacher-section-code">
+                    <span
+                        class="teacher-section-code"
+                    >
                         INDEPENDENT CATEGORY
                     </span>
 
@@ -2266,40 +2279,44 @@ function generalProgramCard(
                 </div>
 
 
-                <span class="teacher-program-count">
-
+                <span
+                    class="teacher-program-count"
+                >
                     ${programs.length}
                     programs
-
                 </span>
 
             </div>
 
 
-            <p class="teacher-section-description">
-
+            <p
+                class="teacher-section-description"
+            >
                 Independent on-stage programs for the
                 General category. No HS or HSS section
                 classification is required.
-
             </p>
 
 
-            <div class="teacher-program-list">
+            <div
+                class="teacher-program-list"
+            >
 
                 ${
-                    programs.map(
-                        (
-                            program,
-                            index
-                        ) =>
-                            programButton(
-                                stage,
-                                'GENERAL',
+                    programs
+                        .map(
+                            (
                                 program,
                                 index
-                            )
-                    ).join('')
+                            ) =>
+                                programButton(
+                                    stage,
+                                    'GENERAL',
+                                    program,
+                                    index
+                                )
+                        )
+                        .join('')
                 }
 
             </div>
@@ -2330,9 +2347,13 @@ function teacherDashboard() {
 
     section.innerHTML = `
 
-        <div class="teacher-dashboard">
+        <div
+            class="teacher-dashboard"
+        >
 
-            <div class="teacher-dashboard-header">
+            <div
+                class="teacher-dashboard-header"
+            >
 
                 <div>
 
@@ -2346,11 +2367,11 @@ function teacherDashboard() {
                     </h2>
 
 
-                    <p class="teacher-dashboard-intro">
-
+                    <p
+                        class="teacher-dashboard-intro"
+                    >
                         Choose the correct stage, section and
                         program. Then enter the winning result.
-
                     </p>
 
                 </div>
@@ -2371,13 +2392,20 @@ function teacherDashboard() {
                  OFF-STAGE
                  ========================================= -->
 
-            <section class="teacher-stage-block">
+            <section
+                class="teacher-stage-block"
+                data-stage="off-stage"
+            >
 
-                <div class="teacher-stage-heading">
+                <div
+                    class="teacher-stage-heading"
+                >
 
                     <div>
 
-                        <span class="teacher-stage-number">
+                        <span
+                            class="teacher-stage-number"
+                        >
                             01
                         </span>
 
@@ -2398,21 +2426,23 @@ function teacherDashboard() {
                     </div>
 
 
-                    <span class="teacher-stage-count">
+                    <span
+                        class="teacher-stage-count"
+                    >
 
                         ${
                             Object.values(
                                 PROGRAMS['off-stage']
                             )
-                            .reduce(
-                                (
-                                    total,
-                                    list
-                                ) =>
-                                    total +
-                                    list.length,
-                                0
-                            )
+                                .reduce(
+                                    (
+                                        total,
+                                        list
+                                    ) =>
+                                        total +
+                                        list.length,
+                                    0
+                                )
                         }
 
                         programs
@@ -2422,7 +2452,9 @@ function teacherDashboard() {
                 </div>
 
 
-                <div class="teacher-section-grid">
+                <div
+                    class="teacher-section-grid"
+                >
 
                     ${sectionProgramCard(
                         'off-stage',
@@ -2467,13 +2499,20 @@ function teacherDashboard() {
                  ON-STAGE
                  ========================================= -->
 
-            <section class="teacher-stage-block">
+            <section
+                class="teacher-stage-block"
+                data-stage="on-stage"
+            >
 
-                <div class="teacher-stage-heading">
+                <div
+                    class="teacher-stage-heading"
+                >
 
                     <div>
 
-                        <span class="teacher-stage-number">
+                        <span
+                            class="teacher-stage-number"
+                        >
                             02
                         </span>
 
@@ -2494,7 +2533,9 @@ function teacherDashboard() {
                     </div>
 
 
-                    <span class="teacher-stage-count">
+                    <span
+                        class="teacher-stage-count"
+                    >
 
                         ${
                             PROGRAMS['on-stage'].UP.length +
@@ -2510,7 +2551,9 @@ function teacherDashboard() {
                 </div>
 
 
-                <div class="teacher-section-grid">
+                <div
+                    class="teacher-section-grid"
+                >
 
                     ${sectionProgramCard(
                         'on-stage',
@@ -2552,7 +2595,9 @@ function teacherDashboard() {
                 class="teacher-result-entry"
             >
 
-                <div class="teacher-entry-empty">
+                <div
+                    class="teacher-entry-empty"
+                >
 
                     <span>
                         +
@@ -2565,10 +2610,8 @@ function teacherDashboard() {
 
 
                     <p>
-
                         Choose any program above to open
                         its result-entry form.
-
                     </p>
 
                 </div>
@@ -2580,9 +2623,13 @@ function teacherDashboard() {
                  PUBLISHED RESULTS
                  ========================================= -->
 
-            <section class="teacher-published-section">
+            <section
+                class="teacher-published-section"
+            >
 
-                <div class="teacher-published-heading">
+                <div
+                    class="teacher-published-heading"
+                >
 
                     <div>
 
@@ -2673,15 +2720,12 @@ function setupTeacherProgramButtons() {
 
                         const index =
                             Number(
-                                button.dataset
-                                    .programIndex
+                                button.dataset.programIndex
                             );
 
 
                         const programList =
-                            PROGRAMS[stage]?.[
-                                section
-                            ];
+                            PROGRAMS[stage]?.[section];
 
 
                         if (!programList) {
@@ -2756,9 +2800,13 @@ function openTeacherResultEntry(
 
     container.innerHTML = `
 
-        <div class="teacher-entry-card">
+        <div
+            class="teacher-entry-card"
+        >
 
-            <div class="teacher-entry-header">
+            <div
+                class="teacher-entry-header"
+            >
 
                 <div>
 
@@ -2768,11 +2816,15 @@ function openTeacherResultEntry(
 
 
                     <h2>
-                        ${escapeHtml(program.name)}
+                        ${escapeHtml(
+                            program.name
+                        )}
                     </h2>
 
 
-                    <div class="teacher-entry-context">
+                    <div
+                        class="teacher-entry-context"
+                    >
 
                         <span>
                             ${stageLabel(stage)}
@@ -2780,24 +2832,20 @@ function openTeacherResultEntry(
 
 
                         <span>
-
                             ${
                                 isGeneral
                                     ? 'GENERAL'
                                     : sectionLabel(section)
                             }
-
                         </span>
 
 
                         <span>
-
                             ${
                                 program.type === 'group'
                                     ? 'GROUP'
                                     : 'INDIVIDUAL'
                             }
-
                         </span>
 
 
@@ -2833,8 +2881,9 @@ function openTeacherResultEntry(
                 class="teacher-entry-form"
             >
 
-                <div class="teacher-entry-grid">
-
+                <div
+                    class="teacher-entry-grid"
+                >
 
                     <label>
 
@@ -3011,14 +3060,14 @@ function openTeacherResultEntry(
                                     >
 
 
-                                    <span class="teacher-field-note">
-
+                                    <span
+                                        class="teacher-field-note"
+                                    >
                                         ${
                                             limit
                                                 ? `Maximum allowed: ${limit} participants.`
                                                 : 'Enter the total number of participants.'
                                         }
-
                                     </span>
 
                                 </label>
@@ -3027,11 +3076,12 @@ function openTeacherResultEntry(
                             : ''
                     }
 
-
                 </div>
 
 
-                <div class="teacher-entry-actions">
+                <div
+                    class="teacher-entry-actions"
+                >
 
                     <button
                         type="submit"
@@ -3086,14 +3136,16 @@ function openTeacherResultEntry(
                 closeTeacherResultEntry();
 
 
-                document
-                    .querySelector(
+                const stageBlock =
+                    document.querySelector(
                         `.teacher-stage-block[data-stage="${stage}"]`
-                    )
-                    ?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    );
+
+
+                stageBlock?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
 
             }
         );
@@ -3123,7 +3175,8 @@ function openTeacherResultEntry(
 
 function closeTeacherResultEntry() {
 
-    selectedTeacherProgram = null;
+    selectedTeacherProgram =
+        null;
 
 
     const container =
@@ -3139,7 +3192,9 @@ function closeTeacherResultEntry() {
 
     container.innerHTML = `
 
-        <div class="teacher-entry-empty">
+        <div
+            class="teacher-entry-empty"
+        >
 
             <span>
                 +
@@ -3152,10 +3207,8 @@ function closeTeacherResultEntry() {
 
 
             <p>
-
                 Choose any program above to open
                 its result-entry form.
-
             </p>
 
         </div>
@@ -3166,7 +3219,7 @@ function closeTeacherResultEntry() {
 
 
 /* =========================================================
-   SUBMIT TEACHER RESULT — SUPABASE
+   SUBMIT TEACHER RESULT
    ========================================================= */
 
 async function submitTeacherResult(
@@ -3223,6 +3276,7 @@ async function submitTeacherResult(
             `This program allows a maximum of ${program.maxParticipants} participants.`
         );
 
+
         return;
 
     }
@@ -3235,7 +3289,9 @@ async function submitTeacherResult(
     const finalSection =
         selectedTeacherProgram.section ===
             'GENERAL'
+
             ? 'GENERAL'
+
             : String(
                 form.get(
                     'section'
@@ -3315,21 +3371,20 @@ async function submitTeacherResult(
             'Please complete all required fields.'
         );
 
+
         return;
 
     }
 
 
     /* =====================================================
-       SUBMIT BUTTON
+       DISABLE BUTTON WHILE SAVING
        ===================================================== */
 
     const submitButton =
-        submitEvent
-            .currentTarget
-            .querySelector(
-                'button[type="submit"]'
-            );
+        submitEvent.currentTarget.querySelector(
+            'button[type="submit"]'
+        );
 
 
     if (submitButton) {
@@ -3365,6 +3420,7 @@ async function submitTeacherResult(
             message.textContent =
                 '✓ Result published successfully to the live database.';
 
+
             message.classList.add(
                 'success'
             );
@@ -3379,9 +3435,9 @@ async function submitTeacherResult(
         renderChampionship();
 
 
-        /* ================================================
-           RESET FORM
-           ================================================ */
+        /*
+         * Keep selected program open.
+         */
 
         const currentForm =
             submitEvent.currentTarget;
@@ -3437,6 +3493,7 @@ async function submitTeacherResult(
 
             message.textContent =
                 `✕ Could not publish result: ${error.message}`;
+
 
             message.classList.remove(
                 'success'
@@ -3510,11 +3567,14 @@ function renderManageResults() {
 
         list.innerHTML = `
 
-            <div class="teacher-manage-empty">
+            <div
+                class="teacher-manage-empty"
+            >
                 No results have been published yet.
             </div>
 
         `;
+
 
         return;
 
@@ -3522,133 +3582,131 @@ function renderManageResults() {
 
 
     list.innerHTML =
-        items.map(
-            item => {
+        items
+            .map(
+                item => {
 
-                const house =
-                    HOUSE_INFO[item.team] ||
-                    HOUSE_INFO.red;
-
-
-                const participantText =
-                    item.participantCount
-                        ? ` · ${item.participantCount} participants`
-                        : '';
+                    const house =
+                        HOUSE_INFO[item.team] ||
+                        HOUSE_INFO.red;
 
 
-                const resultPoints =
-                    getPoints(
-                        item.activityType,
-                        item.place
-                    );
+                    const participantText =
+                        item.participantCount
+                            ? ` · ${item.participantCount} participants`
+                            : '';
 
 
-                return `
+                    const resultPoints =
+                        getPoints(
+                            item.activityType,
+                            item.place
+                        );
 
-                    <article
-                        class="teacher-manage-item"
-                    >
 
-                        <div
-                            class="teacher-manage-main"
+                    return `
+
+                        <article
+                            class="teacher-manage-item"
                         >
 
                             <div
-                                class="teacher-manage-place"
+                                class="teacher-manage-main"
                             >
-                                ${placeNumber(
+
+                                <div
+                                    class="teacher-manage-place"
+                                >
+                                    ${placeNumber(
+                                        item.place
+                                    )}
+                                </div>
+
+
+                                <div>
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            item.name
+                                        )}
+                                    </strong>
+
+
+                                    <p>
+
+                                        ${escapeHtml(
+                                            item.event
+                                        )}
+
+                                        ·
+
+                                        ${stageLabel(
+                                            item.programCategory
+                                        )}
+
+                                        ·
+
+                                        ${sectionLabel(
+                                            item.section
+                                        )}
+
+                                        ·
+
+                                        ${escapeHtml(
+                                            item.studentClass
+                                        )}
+
+                                        ${participantText}
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <span
+                                class="
+                                    team-tag
+                                    ${house.tag}
+                                "
+                            >
+                                ${house.label}
+                            </span>
+
+
+                            <strong
+                                class="teacher-manage-medal"
+                            >
+                                ${medal(
                                     item.place
                                 )}
-                            </div>
+                            </strong>
 
 
-                            <div>
-
-                                <strong>
-                                    ${escapeHtml(
-                                        item.name
-                                    )}
-                                </strong>
+                            <strong
+                                class="teacher-manage-points"
+                            >
+                                ${resultPoints} PTS
+                            </strong>
 
 
-                                <p>
+                            <button
+                                type="button"
+                                class="delete-btn"
+                                data-delete-id="${escapeHtml(item.id)}"
+                            >
+                                Delete
+                            </button>
 
-                                    ${escapeHtml(
-                                        item.event
-                                    )}
+                        </article>
 
-                                    ·
+                    `;
 
-                                    ${stageLabel(
-                                        item.programCategory
-                                    )}
+                }
+            )
+            .join('');
 
-                                    ·
-
-                                    ${sectionLabel(
-                                        item.section
-                                    )}
-
-                                    ·
-
-                                    ${escapeHtml(
-                                        item.studentClass
-                                    )}
-
-                                    ${participantText}
-
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <span
-                            class="
-                                team-tag
-                                ${house.tag}
-                            "
-                        >
-                            ${house.label}
-                        </span>
-
-
-                        <strong
-                            class="teacher-manage-medal"
-                        >
-                            ${medal(
-                                item.place
-                            )}
-                        </strong>
-
-
-                        <strong
-                            class="teacher-manage-points"
-                        >
-                            ${resultPoints} PTS
-                        </strong>
-
-
-                        <button
-                            type="button"
-                            class="delete-btn"
-                            data-delete-id="${escapeHtml(item.id)}"
-                        >
-                            Delete
-                        </button>
-
-                    </article>
-
-                `;
-
-            }
-        ).join('');
-
-
-    /* =====================================================
-       DELETE RESULT BUTTONS
-       ===================================================== */
 
     list
         .querySelectorAll(
@@ -3693,6 +3751,7 @@ function renderManageResults() {
                             button.disabled =
                                 true;
 
+
                             button.textContent =
                                 'Deleting...';
 
@@ -3717,16 +3776,17 @@ function renderManageResults() {
                             );
 
 
-                            alert(
-                                'The result could not be deleted from Supabase.'
-                            );
-
-
                             button.disabled =
                                 false;
 
+
                             button.textContent =
                                 'Delete';
+
+
+                            alert(
+                                'The result could not be deleted from Supabase.'
+                            );
 
                         }
 
@@ -3789,8 +3849,9 @@ function setupTeacherAuth() {
 
 
             if (
+                input &&
                 input.value ===
-                TEACHER_PASSWORD
+                    TEACHER_PASSWORD
             ) {
 
                 sessionStorage.setItem(
@@ -3819,9 +3880,15 @@ function setupTeacherAuth() {
             }
 
 
-            input.value = '';
+            if (input) {
 
-            input.focus();
+                input.value =
+                    '';
+
+
+                input.focus();
+
+            }
 
         }
     );
@@ -3897,6 +3964,10 @@ const spotlightData = {
 };
 
 
+/* =========================================================
+   SETUP SPOTLIGHT
+   ========================================================= */
+
 function setupSpotlight() {
 
     const card =
@@ -3927,7 +3998,9 @@ function setupSpotlight() {
 
         card.innerHTML = `
 
-            <div class="spotlight-number">
+            <div
+                class="spotlight-number"
+            >
                 ${data.number}
             </div>
 
@@ -4020,8 +4093,7 @@ function setupAboutPage() {
 
 
     if (
-        'IntersectionObserver'
-        in window
+        'IntersectionObserver' in window
     ) {
 
         const observer =
@@ -4135,16 +4207,14 @@ function setupAboutPage() {
 
                 const x =
                     (
-                        window.innerWidth /
-                            2 -
+                        window.innerWidth / 2 -
                         event.clientX
                     ) / 70;
 
 
                 const y =
                     (
-                        window.innerHeight /
-                            2 -
+                        window.innerHeight / 2 -
                         event.clientY
                     ) / 70;
 
@@ -4166,8 +4236,7 @@ function setupAboutPage() {
             element => {
 
                 element.textContent =
-                    new Date()
-                        .getFullYear();
+                    new Date().getFullYear();
 
             }
         );
@@ -4247,7 +4316,7 @@ document.addEventListener(
 
 
         /* =================================================
-           LOAD LIVE RESULTS FROM SUPABASE
+           LOAD LIVE RESULTS
            ================================================= */
 
         await loadResults();
