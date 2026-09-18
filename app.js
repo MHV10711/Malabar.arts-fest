@@ -3460,3 +3460,6 @@ document.addEventListener(
 
     }
 );
+await supabaseClient
+    .from("results")
+    .insert(...)
