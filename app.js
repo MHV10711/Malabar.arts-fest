@@ -9,18 +9,7 @@
    SUPABASE CONFIGURATION
    ========================================================= */
 
-const SUPABASE_URL =
-    'https://jlitghsdscahpxjfywnr.supabase.co';
 
-const SUPABASE_ANON_KEY =
-    'sb_publishable_Nwa9_cZlhLpEPCOERsYeQw_JgROWSPW';
-
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_ANON_KEY
-    );
 /* =========================================================
    MIS ART FEST 2026
    MAIN JAVASCRIPT
