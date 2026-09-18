@@ -6,24 +6,24 @@
 
 
 /* =========================================================
-   SUPABASE CONFIGURATION
-   ========================================================= */
-
-
-/* =========================================================
-   MIS ART FEST 2026
-   MAIN JAVASCRIPT
-   ========================================================= */
-
-
-/* =========================================================
    CONFIGURATION
    ========================================================= */
 
 const TEACHER_PASSWORD = 'malabar@5445';
-
-const STORAGE_KEY = 'mis-art-fest-results-v1';
 const SESSION_KEY = 'mis-art-fest-teacher-session';
+
+
+/* =========================================================
+   SUPABASE CONNECTION CHECK
+   ========================================================= */
+
+if (
+    typeof supabaseClient === 'undefined'
+) {
+    console.error(
+        'Supabase client was not found. Make sure supabase.js is loaded before app.js.'
+    );
+}
 
 
 /* =========================================================
@@ -631,6 +631,11 @@ const PROGRAMS = {
 
 /* =========================================================
    DEFAULT RESULTS
+   =========================================================
+
+   These are kept only as reference/demo data.
+   LIVE RESULTS COME FROM SUPABASE.
+
    ========================================================= */
 
 const DEFAULT_RESULTS = [
@@ -773,7 +778,15 @@ function sectionFullName(section) {
 
 
 /* =========================================================
-   RESULT DATA
+   RESULT DATA — SUPABASE VERSION
+   ========================================================= */
+
+let RESULTS_CACHE = [];
+let RESULTS_LOADED = false;
+
+
+/* =========================================================
+   NORMALISE RESULT
    ========================================================= */
 
 function normaliseResult(item) {
@@ -810,8 +823,23 @@ function normaliseResult(item) {
         'on-stage'
     ];
 
+
     const participantCount =
-        Number(item.participantCount);
+        Number(
+            item.participantCount ??
+            item.participant_count
+        );
+
+
+    const activity =
+        item.activityType ??
+        item.activity_type;
+
+
+    const stage =
+        item.programCategory ??
+        item.program_category;
+
 
     return {
 
@@ -826,37 +854,55 @@ function normaliseResult(item) {
         ),
 
         studentClass: String(
-            item.studentClass ||
+            item.studentClass ??
+            item.student_class ??
             '—'
         ),
 
-        section: validSections.includes(item.section)
-            ? item.section
-            : 'HS',
+        section:
+            validSections.includes(
+                item.section
+            )
+                ? item.section
+                : 'HS',
 
-        activityType: validActivities.includes(item.activityType)
-            ? item.activityType
-            : 'individual',
+        activityType:
+            validActivities.includes(
+                activity
+            )
+                ? activity
+                : 'individual',
 
-        programCategory: validStages.includes(item.programCategory)
-            ? item.programCategory
-            : 'on-stage',
+        programCategory:
+            validStages.includes(
+                stage
+            )
+                ? stage
+                : 'on-stage',
 
         event: String(
             item.event ||
             'General Event'
         ),
 
-        team: validTeams.includes(item.team)
-            ? item.team
-            : 'red',
+        team:
+            validTeams.includes(
+                item.team
+            )
+                ? item.team
+                : 'red',
 
-        place: validPlaces.includes(item.place)
-            ? item.place
-            : 'third',
+        place:
+            validPlaces.includes(
+                item.place
+            )
+                ? item.place
+                : 'third',
 
         participantCount:
-            Number.isFinite(participantCount) &&
+            Number.isFinite(
+                participantCount
+            ) &&
             participantCount > 0
                 ? participantCount
                 : null
@@ -866,43 +912,250 @@ function normaliseResult(item) {
 }
 
 
+/* =========================================================
+   GET CURRENT RESULTS
+   ========================================================= */
+
 function results() {
 
-    try {
-
-        const stored =
-            JSON.parse(
-                localStorage.getItem(STORAGE_KEY)
-            );
-
-        if (Array.isArray(stored)) {
-
-            return stored.map(normaliseResult);
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            'Could not read saved results.',
-            error
-        );
-
-    }
-
-    return DEFAULT_RESULTS.map(normaliseResult);
+    return RESULTS_CACHE.map(
+        normaliseResult
+    );
 
 }
 
 
-function saveResults(items) {
+/* =========================================================
+   LOAD RESULTS FROM SUPABASE
+   ========================================================= */
 
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-            items.map(normaliseResult)
+async function loadResults() {
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from('results')
+            .select('*')
+            .order(
+                'created_at',
+                {
+                    ascending: false
+                }
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        RESULTS_CACHE =
+            Array.isArray(data)
+                ? data.map(
+                    normaliseResult
+                )
+                : [];
+
+
+        RESULTS_LOADED = true;
+
+
+        console.log(
+            `Supabase: ${RESULTS_CACHE.length} results loaded.`
+        );
+
+
+        return RESULTS_CACHE;
+
+    } catch (error) {
+
+        console.error(
+            'Could not load results from Supabase:',
+            error
+        );
+
+
+        RESULTS_CACHE = [];
+
+        RESULTS_LOADED = false;
+
+
+        return [];
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE ONE RESULT TO SUPABASE
+   ========================================================= */
+
+async function saveResult(item) {
+
+    const result =
+        normaliseResult(item);
+
+
+    const databaseRow = {
+
+        id: result.id,
+
+        name: result.name,
+
+        student_class:
+            result.studentClass,
+
+        section:
+            result.section,
+
+        activity_type:
+            result.activityType,
+
+        program_category:
+            result.programCategory,
+
+        event:
+            result.event,
+
+        team:
+            result.team,
+
+        place:
+            result.place,
+
+        participant_count:
+            result.participantCount
+
+    };
+
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from('results')
+        .insert([
+            databaseRow
+        ])
+        .select()
+        .single();
+
+
+    if (error) {
+
+        console.error(
+            'Supabase insert error:',
+            error
+        );
+
+        throw error;
+
+    }
+
+
+    const saved =
+        normaliseResult(data);
+
+
+    RESULTS_CACHE = [
+        saved,
+        ...RESULTS_CACHE
+    ];
+
+
+    return saved;
+
+}
+
+
+/* =========================================================
+   DELETE RESULT FROM SUPABASE
+   ========================================================= */
+
+async function deleteResult(id) {
+
+    const {
+        error
+    } = await supabaseClient
+        .from('results')
+        .delete()
+        .eq(
+            'id',
+            id
+        );
+
+
+    if (error) {
+
+        console.error(
+            'Supabase delete error:',
+            error
+        );
+
+        throw error;
+
+    }
+
+
+    RESULTS_CACHE =
+        RESULTS_CACHE.filter(
+            result =>
+                result.id !== id
+        );
+
+}
+
+
+/* =========================================================
+   REALTIME SUPABASE SYNC
+   ========================================================= */
+
+function setupRealtimeResults() {
+
+    supabaseClient
+        .channel(
+            'mis-art-fest-results'
         )
-    );
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'results'
+            },
+            async payload => {
+
+                console.log(
+                    'Supabase realtime update:',
+                    payload.eventType
+                );
+
+
+                await loadResults();
+
+
+                renderPublicResults();
+
+                renderChampionship();
+
+                renderManageResults();
+
+            }
+        )
+        .subscribe(
+            status => {
+
+                console.log(
+                    'Realtime status:',
+                    status
+                );
+
+            }
+        );
 
 }
 
@@ -914,41 +1167,67 @@ function saveResults(items) {
 function setupNav() {
 
     const toggle =
-        document.querySelector('.nav-toggle');
+        document.querySelector(
+            '.nav-toggle'
+        );
 
     const nav =
-        document.querySelector('.nav');
+        document.querySelector(
+            '.nav'
+        );
 
-    if (!toggle || !nav) {
+
+    if (
+        !toggle ||
+        !nav
+    ) {
         return;
     }
 
-    toggle.addEventListener('click', () => {
 
-        const opened =
-            nav.classList.toggle('open');
+    toggle.addEventListener(
+        'click',
+        () => {
 
-        toggle.setAttribute(
-            'aria-expanded',
-            String(opened)
-        );
+            const opened =
+                nav.classList.toggle(
+                    'open'
+                );
 
-    });
-
-    nav.querySelectorAll('a').forEach(link => {
-
-        link.addEventListener('click', () => {
-
-            nav.classList.remove('open');
 
             toggle.setAttribute(
                 'aria-expanded',
-                'false'
+                String(opened)
             );
 
-        });
+        }
+    );
 
-    });
+
+    nav.querySelectorAll(
+        'a'
+    ).forEach(
+        link => {
+
+            link.addEventListener(
+                'click',
+                () => {
+
+                    nav.classList.remove(
+                        'open'
+                    );
+
+
+                    toggle.setAttribute(
+                        'aria-expanded',
+                        'false'
+                    );
+
+                }
+            );
+
+        }
+    );
 
 }
 
@@ -962,21 +1241,30 @@ function setupActiveNav() {
     const currentPage =
         window.location.pathname
             .split('/')
-            .pop() || 'index.html';
+            .pop() ||
+        'index.html';
+
 
     document
-        .querySelectorAll('.nav a')
-        .forEach(link => {
+        .querySelectorAll(
+            '.nav a'
+        )
+        .forEach(
+            link => {
 
-            const page =
-                link.getAttribute('href');
+                const page =
+                    link.getAttribute(
+                        'href'
+                    );
 
-            link.classList.toggle(
-                'active',
-                page === currentPage
-            );
 
-        });
+                link.classList.toggle(
+                    'active',
+                    page === currentPage
+                );
+
+            }
+        );
 
 }
 
@@ -988,45 +1276,63 @@ function setupActiveNav() {
 function setupReveal() {
 
     const items =
-        document.querySelectorAll('.reveal');
+        document.querySelectorAll(
+            '.reveal'
+        );
+
 
     if (!items.length) {
         return;
     }
 
+
     if (
-        !('IntersectionObserver' in window)
+        !(
+            'IntersectionObserver'
+            in window
+        )
     ) {
 
-        items.forEach(item => {
-            item.classList.add('visible');
-        });
+        items.forEach(
+            item => {
+
+                item.classList.add(
+                    'visible'
+                );
+
+            }
+        );
 
         return;
 
     }
 
+
     const observer =
         new IntersectionObserver(
             entries => {
 
-                entries.forEach(entry => {
+                entries.forEach(
+                    entry => {
 
-                    if (
-                        !entry.isIntersecting
-                    ) {
-                        return;
+                        if (
+                            !entry.isIntersecting
+                        ) {
+                            return;
+                        }
+
+
+                        entry.target.classList.add(
+                            'visible'
+                        );
+
+
+                        observer.unobserve(
+                            entry.target
+                        );
+
                     }
-
-                    entry.target.classList.add(
-                        'visible'
-                    );
-
-                    observer.unobserve(
-                        entry.target
-                    );
-
-                });
+                );
 
             },
             {
@@ -1034,9 +1340,16 @@ function setupReveal() {
             }
         );
 
-    items.forEach(item => {
-        observer.observe(item);
-    });
+
+    items.forEach(
+        item => {
+
+            observer.observe(
+                item
+            );
+
+        }
+    );
 
 }
 
@@ -1048,78 +1361,100 @@ function setupReveal() {
 function renderPublicResults() {
 
     const list =
-        document.querySelector('#results-list');
+        document.querySelector(
+            '#results-list'
+        );
+
 
     if (!list) {
         return;
     }
 
-    const items = results();
 
-    list.innerHTML = items.map(item => {
+    const items =
+        results();
 
-        const house =
-            HOUSE_INFO[item.team] ||
-            HOUSE_INFO.red;
 
-        return `
+    list.innerHTML =
+        items.map(
+            item => {
 
-            <article
-                class="result-row"
-                data-section="${escapeHtml(item.section)}"
-                data-activity="${escapeHtml(item.activityType)}"
-                data-stage="${escapeHtml(item.programCategory)}"
-            >
+                const house =
+                    HOUSE_INFO[item.team] ||
+                    HOUSE_INFO.red;
 
-                <span
-                    class="place ${
-                        item.place === 'first'
-                            ? 'first'
-                            : ''
-                    }"
-                >
-                    ${placeNumber(item.place)}
-                </span>
 
-                <div>
+                return `
 
-                    <div class="student">
-                        ${escapeHtml(item.name)}
-                    </div>
+                    <article
+                        class="result-row"
+                        data-section="${escapeHtml(item.section)}"
+                        data-activity="${escapeHtml(item.activityType)}"
+                        data-stage="${escapeHtml(item.programCategory)}"
+                    >
 
-                    <div class="meta">
+                        <span
+                            class="place ${
+                                item.place === 'first'
+                                    ? 'first'
+                                    : ''
+                            }"
+                        >
+                            ${placeNumber(item.place)}
+                        </span>
 
-                        ${stageLabel(item.programCategory)}
-                        ·
-                        ${sectionLabel(item.section)}
-                        ·
-                        ${escapeHtml(item.studentClass)}
-                        ·
-                        ${escapeHtml(item.event)}
 
-                    </div>
+                        <div>
 
-                </div>
+                            <div class="student">
+                                ${escapeHtml(item.name)}
+                            </div>
 
-                <span
-                    class="team-tag ${house.tag}"
-                >
-                    ${house.name.toUpperCase()}
-                </span>
 
-                <span class="result-type">
-                    ${titleCase(item.activityType)}
-                </span>
+                            <div class="meta">
 
-                <strong>
-                    ${medal(item.place)}
-                </strong>
+                                ${stageLabel(item.programCategory)}
 
-            </article>
+                                ·
 
-        `;
+                                ${sectionLabel(item.section)}
 
-    }).join('');
+                                ·
+
+                                ${escapeHtml(item.studentClass)}
+
+                                ·
+
+                                ${escapeHtml(item.event)}
+
+                            </div>
+
+                        </div>
+
+
+                        <span
+                            class="team-tag ${house.tag}"
+                        >
+                            ${house.name.toUpperCase()}
+                        </span>
+
+
+                        <span class="result-type">
+                            ${titleCase(item.activityType)}
+                        </span>
+
+
+                        <strong>
+                            ${medal(item.place)}
+                        </strong>
+
+                    </article>
+
+                `;
+
+            }
+        ).join('');
+
 
     setupResultFilters();
 
@@ -1133,10 +1468,16 @@ function renderPublicResults() {
 function setupResultFilters() {
 
     const search =
-        document.querySelector('#result-search');
+        document.querySelector(
+            '#result-search'
+        );
+
 
     const empty =
-        document.querySelector('#empty-results');
+        document.querySelector(
+            '#empty-results'
+        );
+
 
     const sectionButtons =
         [
@@ -1145,12 +1486,14 @@ function setupResultFilters() {
             )
         ];
 
+
     const activityButtons =
         [
             ...document.querySelectorAll(
                 '.activity-card[data-activity]'
             )
         ];
+
 
     const stageButtons =
         [
@@ -1159,9 +1502,17 @@ function setupResultFilters() {
             )
         ];
 
-    let selectedSection = 'all';
-    let selectedActivity = 'all';
-    let selectedStage = 'all';
+
+    let selectedSection =
+        'all';
+
+
+    let selectedActivity =
+        'all';
+
+
+    let selectedStage =
+        'all';
 
 
     function filter() {
@@ -1174,45 +1525,64 @@ function setupResultFilters() {
                 .trim()
                 .toLowerCase();
 
-        let visibleCount = 0;
+
+        let visibleCount =
+            0;
+
 
         document
-            .querySelectorAll('.result-row')
-            .forEach(row => {
+            .querySelectorAll(
+                '.result-row'
+            )
+            .forEach(
+                row => {
 
-                const matchesSearch =
-                    row.textContent
-                        .toLowerCase()
-                        .includes(phrase);
+                    const matchesSearch =
+                        row.textContent
+                            .toLowerCase()
+                            .includes(
+                                phrase
+                            );
 
-                const matchesSection =
-                    selectedSection === 'all' ||
-                    row.dataset.section === selectedSection;
 
-                const matchesActivity =
-                    selectedActivity === 'all' ||
-                    row.dataset.activity === selectedActivity;
+                    const matchesSection =
+                        selectedSection === 'all' ||
+                        row.dataset.section ===
+                            selectedSection;
 
-                const matchesStage =
-                    selectedStage === 'all' ||
-                    row.dataset.stage === selectedStage;
 
-                const show =
-                    matchesSearch &&
-                    matchesSection &&
-                    matchesActivity &&
-                    matchesStage;
+                    const matchesActivity =
+                        selectedActivity === 'all' ||
+                        row.dataset.activity ===
+                            selectedActivity;
 
-                row.classList.toggle(
-                    'hidden',
-                    !show
-                );
 
-                if (show) {
-                    visibleCount++;
+                    const matchesStage =
+                        selectedStage === 'all' ||
+                        row.dataset.stage ===
+                            selectedStage;
+
+
+                    const show =
+                        matchesSearch &&
+                        matchesSection &&
+                        matchesActivity &&
+                        matchesStage;
+
+
+                    row.classList.toggle(
+                        'hidden',
+                        !show
+                    );
+
+
+                    if (show) {
+                        visibleCount++;
+                    }
+
                 }
+            );
 
-            });
 
         empty?.classList.toggle(
             'hidden',
@@ -1222,124 +1592,163 @@ function setupResultFilters() {
     }
 
 
-    sectionButtons.forEach(button => {
+    sectionButtons.forEach(
+        button => {
 
-        button.addEventListener(
-            'click',
-            () => {
+            button.addEventListener(
+                'click',
+                () => {
 
-                selectedSection =
-                    button.dataset.section;
+                    selectedSection =
+                        button.dataset.section;
 
-                sectionButtons.forEach(item => {
 
-                    item.classList.toggle(
-                        'active',
-                        item === button
+                    sectionButtons.forEach(
+                        item => {
+
+                            item.classList.toggle(
+                                'active',
+                                item === button
+                            );
+
+                        }
                     );
 
-                });
 
-                filter();
+                    filter();
 
-            }
-        );
+                }
+            );
 
-    });
+        }
+    );
 
 
-    activityButtons.forEach(button => {
+    activityButtons.forEach(
+        button => {
 
-        button.addEventListener(
-            'click',
-            () => {
+            button.addEventListener(
+                'click',
+                () => {
 
-                selectedActivity =
-                    button.dataset.activity;
+                    selectedActivity =
+                        button.dataset.activity;
 
-                activityButtons.forEach(item => {
 
-                    item.classList.toggle(
-                        'active',
-                        item === button
+                    activityButtons.forEach(
+                        item => {
+
+                            item.classList.toggle(
+                                'active',
+                                item === button
+                            );
+
+                        }
                     );
 
-                });
 
-                filter();
+                    filter();
 
-            }
-        );
+                }
+            );
 
-    });
+        }
+    );
 
 
-    stageButtons.forEach(button => {
+    stageButtons.forEach(
+        button => {
 
-        button.addEventListener(
-            'click',
-            () => {
+            button.addEventListener(
+                'click',
+                () => {
 
-                selectedStage =
-                    button.dataset.resultStage;
+                    selectedStage =
+                        button.dataset.resultStage;
 
-                stageButtons.forEach(item => {
 
-                    item.classList.toggle(
-                        'active',
-                        item === button
+                    stageButtons.forEach(
+                        item => {
+
+                            item.classList.toggle(
+                                'active',
+                                item === button
+                            );
+
+                        }
                     );
 
-                });
 
-                filter();
+                    filter();
 
-            }
-        );
+                }
+            );
 
-    });
+        }
+    );
 
 
     document
-        .querySelector('#clear-filters')
+        .querySelector(
+            '#clear-filters'
+        )
         ?.addEventListener(
             'click',
             () => {
 
-                selectedSection = 'all';
-                selectedActivity = 'all';
-                selectedStage = 'all';
+                selectedSection =
+                    'all';
+
+                selectedActivity =
+                    'all';
+
+                selectedStage =
+                    'all';
+
 
                 if (search) {
                     search.value = '';
                 }
 
-                sectionButtons.forEach(item => {
 
-                    item.classList.toggle(
-                        'active',
-                        item.dataset.section === 'all'
-                    );
+                sectionButtons.forEach(
+                    item => {
 
-                });
+                        item.classList.toggle(
+                            'active',
+                            item.dataset.section ===
+                                'all'
+                        );
 
-                activityButtons.forEach(item => {
+                    }
+                );
 
-                    item.classList.toggle(
-                        'active',
-                        item.dataset.activity === 'all'
-                    );
 
-                });
+                activityButtons.forEach(
+                    item => {
 
-                stageButtons.forEach(item => {
+                        item.classList.toggle(
+                            'active',
+                            item.dataset.activity ===
+                                'all'
+                        );
 
-                    item.classList.toggle(
-                        'active',
-                        item.dataset.resultStage === 'all'
-                    );
+                    }
+                );
 
-                });
+
+                stageButtons.forEach(
+                    item => {
+
+                        item.classList.toggle(
+                            'active',
+                            item.dataset.resultStage ===
+                                'all'
+                        );
+
+                    }
+                );
+
 
                 filter();
 
@@ -1365,58 +1774,65 @@ function setupResultFilters() {
 function pointsByHouse() {
 
     const totals = {
+
         red: 0,
+
         green: 0,
+
         blue: 0,
+
         yellow: 0
+
     };
 
-    results().forEach(item => {
 
-        if (
-            totals[item.team] !== undefined
-        ) {
+    results().forEach(
+        item => {
 
-            /*
-             * IMPORTANT:
-             *
-             * Individual:
-             * 1st = 5
-             * 2nd = 3
-             * 3rd = 1
-             *
-             * Group:
-             * 1st = 10
-             * 2nd = 5
-             * 3rd = 3
-             */
+            if (
+                totals[item.team] !==
+                undefined
+            ) {
 
-            totals[item.team] +=
-                getPoints(
-                    item.activityType,
-                    item.place
-                );
+                totals[item.team] +=
+                    getPoints(
+                        item.activityType,
+                        item.place
+                    );
+
+            }
 
         }
+    );
 
-    });
 
     return Object
         .entries(totals)
-        .sort((a, b) => {
+        .sort(
+            (a, b) => {
 
-            if (b[1] !== a[1]) {
-                return b[1] - a[1];
+                if (
+                    b[1] !== a[1]
+                ) {
+
+                    return b[1] - a[1];
+
+                }
+
+
+                return a[0].localeCompare(
+                    b[0]
+                );
+
             }
-
-            return a[0].localeCompare(
-                b[0]
-            );
-
-        });
+        );
 
 }
 
+
+/* =========================================================
+   RENDER CHAMPIONSHIP
+   ========================================================= */
 
 function renderChampionship() {
 
@@ -1425,34 +1841,43 @@ function renderChampionship() {
             '.leaderboard'
         );
 
+
     if (!leaderboard) {
         return;
     }
+
 
     const spotlight =
         document.querySelector(
             '#champion-spotlight'
         );
 
+
     const gallery =
         document.querySelector(
             '#house-gallery'
         );
 
+
     const standing =
         pointsByHouse();
 
+
     const highest =
         Math.max(
-            standing[0]?.[1] || 0,
+            standing[0]?.[1] ||
+                0,
             1
         );
+
 
     const [
         leadingTeam,
         leadingScore
     ] =
-        standing[0] || ['red', 0];
+        standing[0] ||
+        ['red', 0];
+
 
     const leader =
         HOUSE_INFO[leadingTeam] ||
@@ -1467,16 +1892,19 @@ function renderChampionship() {
                 ♛
             </div>
 
+
             <div>
 
                 <p class="eyebrow">
                     CURRENT LEADER
                 </p>
 
+
                 <h2>
                     ${escapeHtml(leader.name)}
                     is <em>in the lead.</em>
                 </h2>
+
 
                 <p>
                     ${leadingScore}
@@ -1485,9 +1913,15 @@ function renderChampionship() {
 
             </div>
 
+
             <strong class="champion-points">
+
                 ${leadingScore}
-                <small>PTS</small>
+
+                <small>
+                    PTS
+                </small>
+
             </strong>
 
         `;
@@ -1504,6 +1938,7 @@ function renderChampionship() {
                     const house =
                         HOUSE_INFO[team];
 
+
                     return `
 
                         <article
@@ -1514,16 +1949,25 @@ function renderChampionship() {
                                 0${index + 1}
                             </span>
 
+
                             <h3>
                                 ${escapeHtml(house.name)}
                             </h3>
 
+
                             <strong>
+
                                 ${score}
-                                <small>PTS</small>
+
+                                <small>
+                                    PTS
+                                </small>
+
                             </strong>
 
+
                             <div>
+
                                 <i
                                     style="
                                         width:${
@@ -1535,14 +1979,18 @@ function renderChampionship() {
                                         }%
                                     "
                                 ></i>
+
                             </div>
 
+
                             <p>
+
                                 ${
                                     index === 0
                                         ? 'Leading the way'
                                         : `${leadingScore - score} points to the lead`
                                 }
+
                             </p>
 
                         </article>
@@ -1562,6 +2010,7 @@ function renderChampionship() {
                 const house =
                     HOUSE_INFO[team];
 
+
                 return `
 
                     <article class="rank-row">
@@ -1570,11 +2019,13 @@ function renderChampionship() {
                             0${index + 1}
                         </span>
 
+
                         <div>
 
                             <strong>
                                 ${escapeHtml(house.name)}
                             </strong>
+
 
                             <div class="bar-wrap">
 
@@ -1595,6 +2046,7 @@ function renderChampionship() {
 
                         </div>
 
+
                         <span
                             class="
                                 team-tag
@@ -1603,6 +2055,7 @@ function renderChampionship() {
                         >
                             ${house.label}
                         </span>
+
 
                         <strong class="rank-points">
                             ${score}
@@ -1641,10 +2094,12 @@ function programButton(
             ? `Maximum ${program.maxParticipants}`
             : '';
 
+
     const typeText =
         program.type === 'group'
             ? 'Group'
             : 'Individual';
+
 
     return `
 
@@ -1660,11 +2115,13 @@ function programButton(
                 ${String(index + 1).padStart(2, '0')}
             </span>
 
+
             <span class="teacher-program-content">
 
                 <strong>
                     ${escapeHtml(program.name)}
                 </strong>
+
 
                 <small>
 
@@ -1679,6 +2136,7 @@ function programButton(
                 </small>
 
             </span>
+
 
             <span class="teacher-program-arrow">
                 →
@@ -1704,6 +2162,7 @@ function sectionProgramCard(
     const info =
         SECTION_INFO[section];
 
+
     return `
 
         <article class="teacher-section-card">
@@ -1716,22 +2175,28 @@ function sectionProgramCard(
                         ${info.label}
                     </span>
 
+
                     <h3>
                         ${info.full}
                     </h3>
 
                 </div>
 
+
                 <span class="teacher-program-count">
+
                     ${programs.length}
+
                     ${
                         programs.length === 1
                             ? 'program'
                             : 'programs'
                     }
+
                 </span>
 
             </div>
+
 
             <div class="teacher-program-list">
 
@@ -1739,7 +2204,10 @@ function sectionProgramCard(
                     programs.length
                         ? programs
                             .map(
-                                (program, index) =>
+                                (
+                                    program,
+                                    index
+                                ) =>
                                     programButton(
                                         stage,
                                         section,
@@ -1790,29 +2258,41 @@ function generalProgramCard(
                         INDEPENDENT CATEGORY
                     </span>
 
+
                     <h3>
                         GENERAL
                     </h3>
 
                 </div>
 
+
                 <span class="teacher-program-count">
-                    ${programs.length} programs
+
+                    ${programs.length}
+                    programs
+
                 </span>
 
             </div>
 
+
             <p class="teacher-section-description">
+
                 Independent on-stage programs for the
                 General category. No HS or HSS section
                 classification is required.
+
             </p>
+
 
             <div class="teacher-program-list">
 
                 ${
                     programs.map(
-                        (program, index) =>
+                        (
+                            program,
+                            index
+                        ) =>
                             programButton(
                                 stage,
                                 'GENERAL',
@@ -1842,6 +2322,7 @@ function teacherDashboard() {
             '.portal-section'
         );
 
+
     if (!section) {
         return;
     }
@@ -1859,16 +2340,21 @@ function teacherDashboard() {
                         TEACHER DASHBOARD
                     </p>
 
+
                     <h2>
                         Enter <em>results.</em>
                     </h2>
 
+
                     <p class="teacher-dashboard-intro">
+
                         Choose the correct stage, section and
                         program. Then enter the winning result.
+
                     </p>
 
                 </div>
+
 
                 <button
                     class="btn ghost"
@@ -1895,11 +2381,13 @@ function teacherDashboard() {
                             01
                         </span>
 
+
                         <div>
 
                             <p class="eyebrow">
                                 LITERARY · VISUAL · WRITTEN
                             </p>
+
 
                             <h2>
                                 Off-Stage
@@ -1909,6 +2397,7 @@ function teacherDashboard() {
 
                     </div>
 
+
                     <span class="teacher-stage-count">
 
                         ${
@@ -1916,8 +2405,12 @@ function teacherDashboard() {
                                 PROGRAMS['off-stage']
                             )
                             .reduce(
-                                (total, list) =>
-                                    total + list.length,
+                                (
+                                    total,
+                                    list
+                                ) =>
+                                    total +
+                                    list.length,
                                 0
                             )
                         }
@@ -1937,11 +2430,13 @@ function teacherDashboard() {
                         PROGRAMS['off-stage'].LP1
                     )}
 
+
                     ${sectionProgramCard(
                         'off-stage',
                         'LP2',
                         PROGRAMS['off-stage'].LP2
                     )}
+
 
                     ${sectionProgramCard(
                         'off-stage',
@@ -1949,11 +2444,13 @@ function teacherDashboard() {
                         PROGRAMS['off-stage'].UP
                     )}
 
+
                     ${sectionProgramCard(
                         'off-stage',
                         'HS',
                         PROGRAMS['off-stage'].HS
                     )}
+
 
                     ${sectionProgramCard(
                         'off-stage',
@@ -1980,11 +2477,13 @@ function teacherDashboard() {
                             02
                         </span>
 
+
                         <div>
 
                             <p class="eyebrow">
                                 PERFORMANCE · MUSIC · SPEECH
                             </p>
+
 
                             <h2>
                                 On-Stage
@@ -1993,6 +2492,7 @@ function teacherDashboard() {
                         </div>
 
                     </div>
+
 
                     <span class="teacher-stage-count">
 
@@ -2018,17 +2518,20 @@ function teacherDashboard() {
                         PROGRAMS['on-stage'].UP
                     )}
 
+
                     ${sectionProgramCard(
                         'on-stage',
                         'HS',
                         PROGRAMS['on-stage'].HS
                     )}
 
+
                     ${sectionProgramCard(
                         'on-stage',
                         'HSS',
                         PROGRAMS['on-stage'].HSS
                     )}
+
 
                     ${generalProgramCard(
                         'on-stage',
@@ -2051,15 +2554,21 @@ function teacherDashboard() {
 
                 <div class="teacher-entry-empty">
 
-                    <span>+</span>
+                    <span>
+                        +
+                    </span>
+
 
                     <h3>
                         Select a program
                     </h3>
 
+
                     <p>
+
                         Choose any program above to open
                         its result-entry form.
+
                     </p>
 
                 </div>
@@ -2081,11 +2590,13 @@ function teacherDashboard() {
                             LIVE RECORD
                         </p>
 
+
                         <h2>
                             Published results
                         </h2>
 
                     </div>
+
 
                     <span
                         id="teacher-result-total"
@@ -2110,7 +2621,9 @@ function teacherDashboard() {
 
 
     document
-        .querySelector('#sign-out')
+        .querySelector(
+            '#sign-out'
+        )
         ?.addEventListener(
             'click',
             () => {
@@ -2118,6 +2631,7 @@ function teacherDashboard() {
                 sessionStorage.removeItem(
                     SESSION_KEY
                 );
+
 
                 window.location.reload();
 
@@ -2142,47 +2656,59 @@ function setupTeacherProgramButtons() {
         .querySelectorAll(
             '.teacher-program-choice'
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                'click',
-                () => {
+                button.addEventListener(
+                    'click',
+                    () => {
 
-                    const stage =
-                        button.dataset.stage;
+                        const stage =
+                            button.dataset.stage;
 
-                    const section =
-                        button.dataset.section;
 
-                    const index =
-                        Number(
-                            button.dataset.programIndex
+                        const section =
+                            button.dataset.section;
+
+
+                        const index =
+                            Number(
+                                button.dataset
+                                    .programIndex
+                            );
+
+
+                        const programList =
+                            PROGRAMS[stage]?.[
+                                section
+                            ];
+
+
+                        if (!programList) {
+                            return;
+                        }
+
+
+                        const program =
+                            programList[index];
+
+
+                        if (!program) {
+                            return;
+                        }
+
+
+                        openTeacherResultEntry(
+                            stage,
+                            section,
+                            program
                         );
 
-                    const programList =
-                        PROGRAMS[stage]?.[section];
-
-                    if (!programList) {
-                        return;
                     }
+                );
 
-                    const program =
-                        programList[index];
-
-                    if (!program) {
-                        return;
-                    }
-
-                    openTeacherResultEntry(
-                        stage,
-                        section,
-                        program
-                    );
-
-                }
-            );
-
-        });
+            }
+        );
 
 }
 
@@ -2198,9 +2724,13 @@ function openTeacherResultEntry(
 ) {
 
     selectedTeacherProgram = {
+
         stage,
+
         section,
+
         program
+
     };
 
 
@@ -2208,6 +2738,7 @@ function openTeacherResultEntry(
         document.querySelector(
             '#teacher-result-entry'
         );
+
 
     if (!container) {
         return;
@@ -2235,9 +2766,11 @@ function openTeacherResultEntry(
                         RESULT ENTRY
                     </p>
 
+
                     <h2>
                         ${escapeHtml(program.name)}
                     </h2>
+
 
                     <div class="teacher-entry-context">
 
@@ -2245,21 +2778,28 @@ function openTeacherResultEntry(
                             ${stageLabel(stage)}
                         </span>
 
+
                         <span>
+
                             ${
                                 isGeneral
                                     ? 'GENERAL'
                                     : sectionLabel(section)
                             }
+
                         </span>
 
+
                         <span>
+
                             ${
                                 program.type === 'group'
                                     ? 'GROUP'
                                     : 'INDIVIDUAL'
                             }
+
                         </span>
+
 
                         ${
                             limit
@@ -2304,6 +2844,7 @@ function openTeacherResultEntry(
                                 : 'Student Name'
                         }
 
+
                         <input
                             type="text"
                             name="name"
@@ -2322,6 +2863,7 @@ function openTeacherResultEntry(
                     <label>
 
                         Class
+
 
                         <input
                             type="text"
@@ -2345,6 +2887,7 @@ function openTeacherResultEntry(
 
                         House
 
+
                         <select
                             name="team"
                             required
@@ -2354,17 +2897,21 @@ function openTeacherResultEntry(
                                 Select house
                             </option>
 
+
                             <option value="red">
                                 Crimson / Red
                             </option>
+
 
                             <option value="green">
                                 Verdant / Green
                             </option>
 
+
                             <option value="blue">
                                 Azure / Blue
                             </option>
+
 
                             <option value="yellow">
                                 Solar / Yellow
@@ -2383,6 +2930,7 @@ function openTeacherResultEntry(
 
                         Place
 
+
                         <select
                             name="place"
                             required
@@ -2392,6 +2940,7 @@ function openTeacherResultEntry(
                                 Select place
                             </option>
 
+
                             ${
                                 program.type === 'group'
                                     ? `
@@ -2400,9 +2949,11 @@ function openTeacherResultEntry(
                                             First — 10 points
                                         </option>
 
+
                                         <option value="second">
                                             Second — 5 points
                                         </option>
+
 
                                         <option value="third">
                                             Third — 3 points
@@ -2415,9 +2966,11 @@ function openTeacherResultEntry(
                                             First — 5 points
                                         </option>
 
+
                                         <option value="second">
                                             Second — 3 points
                                         </option>
+
 
                                         <option value="third">
                                             Third — 1 point
@@ -2439,6 +2992,7 @@ function openTeacherResultEntry(
 
                                     Number of Participants
 
+
                                     <input
                                         type="number"
                                         name="participantCount"
@@ -2456,12 +3010,15 @@ function openTeacherResultEntry(
                                         }"
                                     >
 
+
                                     <span class="teacher-field-note">
+
                                         ${
                                             limit
                                                 ? `Maximum allowed: ${limit} participants.`
                                                 : 'Enter the total number of participants.'
                                         }
+
                                     </span>
 
                                 </label>
@@ -2482,6 +3039,7 @@ function openTeacherResultEntry(
                     >
                         Publish Result →
                     </button>
+
 
                     <button
                         type="button"
@@ -2527,6 +3085,7 @@ function openTeacherResultEntry(
 
                 closeTeacherResultEntry();
 
+
                 document
                     .querySelector(
                         `.teacher-stage-block[data-stage="${stage}"]`
@@ -2566,28 +3125,37 @@ function closeTeacherResultEntry() {
 
     selectedTeacherProgram = null;
 
+
     const container =
         document.querySelector(
             '#teacher-result-entry'
         );
 
+
     if (!container) {
         return;
     }
+
 
     container.innerHTML = `
 
         <div class="teacher-entry-empty">
 
-            <span>+</span>
+            <span>
+                +
+            </span>
+
 
             <h3>
                 Select a program
             </h3>
 
+
             <p>
+
                 Choose any program above to open
                 its result-entry form.
+
             </p>
 
         </div>
@@ -2598,10 +3166,10 @@ function closeTeacherResultEntry() {
 
 
 /* =========================================================
-   SUBMIT TEACHER RESULT
+   SUBMIT TEACHER RESULT — SUPABASE
    ========================================================= */
 
-function submitTeacherResult(
+async function submitTeacherResult(
     submitEvent
 ) {
 
@@ -2624,12 +3192,16 @@ function submitTeacherResult(
 
 
     const participantValue =
-        form.get('participantCount');
+        form.get(
+            'participantCount'
+        );
 
 
     const participantCount =
         participantValue
-            ? Number(participantValue)
+            ? Number(
+                participantValue
+            )
             : null;
 
 
@@ -2661,26 +3233,36 @@ function submitTeacherResult(
        ===================================================== */
 
     const finalSection =
-        selectedTeacherProgram.section === 'GENERAL'
+        selectedTeacherProgram.section ===
+            'GENERAL'
             ? 'GENERAL'
             : String(
-                form.get('section') ||
+                form.get(
+                    'section'
+                ) ||
                 selectedTeacherProgram.section
             );
 
 
     const item = {
 
-        id: createId(),
+        id:
+            createId(),
 
         name:
             String(
-                form.get('name') || ''
+                form.get(
+                    'name'
+                ) ||
+                ''
             ).trim(),
 
         studentClass:
             String(
-                form.get('studentClass') || ''
+                form.get(
+                    'studentClass'
+                ) ||
+                ''
             ).trim(),
 
         section:
@@ -2699,12 +3281,18 @@ function submitTeacherResult(
 
         team:
             String(
-                form.get('team') || ''
+                form.get(
+                    'team'
+                ) ||
+                ''
             ),
 
         place:
             String(
-                form.get('place') || ''
+                form.get(
+                    'place'
+                ) ||
+                ''
             ),
 
         participantCount
@@ -2733,79 +3321,148 @@ function submitTeacherResult(
 
 
     /* =====================================================
-       SAVE
+       SUBMIT BUTTON
        ===================================================== */
 
-    saveResults([
-        item,
-        ...results()
-    ]);
+    const submitButton =
+        submitEvent
+            .currentTarget
+            .querySelector(
+                'button[type="submit"]'
+            );
 
 
-    const message =
-        document.querySelector(
-            '#teacher-save-message'
-        );
+    if (submitButton) {
 
+        submitButton.disabled =
+            true;
 
-    if (message) {
-
-        message.textContent =
-            '✓ Result published successfully.';
-
-        message.classList.add(
-            'success'
-        );
+        submitButton.textContent =
+            'Publishing...';
 
     }
 
 
-    renderManageResults();
+    /* =====================================================
+       SAVE TO SUPABASE
+       ===================================================== */
 
-    renderPublicResults();
+    try {
 
-    renderChampionship();
-
-
-    /*
-       Keep the selected program open.
-
-       This makes it easy to enter
-       First, Second and Third place.
-    */
-
-    const currentForm =
-        submitEvent.currentTarget;
-
-
-    currentForm.reset();
-
-
-    const team =
-        currentForm.querySelector(
-            '[name="team"]'
+        await saveResult(
+            item
         );
 
-    if (team) {
-        team.value = '';
-    }
+
+        const message =
+            document.querySelector(
+                '#teacher-save-message'
+            );
 
 
-    const place =
-        currentForm.querySelector(
-            '[name="place"]'
+        if (message) {
+
+            message.textContent =
+                '✓ Result published successfully to the live database.';
+
+            message.classList.add(
+                'success'
+            );
+
+        }
+
+
+        renderManageResults();
+
+        renderPublicResults();
+
+        renderChampionship();
+
+
+        /* ================================================
+           RESET FORM
+           ================================================ */
+
+        const currentForm =
+            submitEvent.currentTarget;
+
+
+        currentForm.reset();
+
+
+        const team =
+            currentForm.querySelector(
+                '[name="team"]'
+            );
+
+
+        if (team) {
+            team.value = '';
+        }
+
+
+        const place =
+            currentForm.querySelector(
+                '[name="place"]'
+            );
+
+
+        if (place) {
+            place.value = '';
+        }
+
+
+        currentForm
+            .querySelector(
+                '[name="name"]'
+            )
+            ?.focus();
+
+
+    } catch (error) {
+
+        console.error(
+            'Could not publish result:',
+            error
         );
 
-    if (place) {
-        place.value = '';
+
+        const message =
+            document.querySelector(
+                '#teacher-save-message'
+            );
+
+
+        if (message) {
+
+            message.textContent =
+                `✕ Could not publish result: ${error.message}`;
+
+            message.classList.remove(
+                'success'
+            );
+
+        }
+
+
+        alert(
+            'The result could not be saved to Supabase. Check the browser console for details.'
+        );
+
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled =
+                false;
+
+            submitButton.textContent =
+                'Publish Result →';
+
+        }
+
     }
-
-
-    currentForm
-        .querySelector(
-            '[name="name"]'
-        )
-        ?.focus();
 
 }
 
@@ -2820,6 +3477,7 @@ function renderManageResults() {
         document.querySelector(
             '#manage-results'
         );
+
 
     if (!list) {
         return;
@@ -2864,165 +3522,219 @@ function renderManageResults() {
 
 
     list.innerHTML =
-        items.map(item => {
+        items.map(
+            item => {
 
-            const house =
-                HOUSE_INFO[item.team] ||
-                HOUSE_INFO.red;
-
-
-            const participantText =
-                item.participantCount
-                    ? ` · ${item.participantCount} participants`
-                    : '';
+                const house =
+                    HOUSE_INFO[item.team] ||
+                    HOUSE_INFO.red;
 
 
-            /*
-             * Calculate the actual points for this result.
-             */
-
-            const resultPoints =
-                getPoints(
-                    item.activityType,
-                    item.place
-                );
+                const participantText =
+                    item.participantCount
+                        ? ` · ${item.participantCount} participants`
+                        : '';
 
 
-            return `
+                const resultPoints =
+                    getPoints(
+                        item.activityType,
+                        item.place
+                    );
 
-                <article class="teacher-manage-item">
 
-                    <div class="teacher-manage-main">
+                return `
 
-                        <div class="teacher-manage-place">
-                            ${placeNumber(item.place)}
+                    <article
+                        class="teacher-manage-item"
+                    >
+
+                        <div
+                            class="teacher-manage-main"
+                        >
+
+                            <div
+                                class="teacher-manage-place"
+                            >
+                                ${placeNumber(
+                                    item.place
+                                )}
+                            </div>
+
+
+                            <div>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        item.name
+                                    )}
+                                </strong>
+
+
+                                <p>
+
+                                    ${escapeHtml(
+                                        item.event
+                                    )}
+
+                                    ·
+
+                                    ${stageLabel(
+                                        item.programCategory
+                                    )}
+
+                                    ·
+
+                                    ${sectionLabel(
+                                        item.section
+                                    )}
+
+                                    ·
+
+                                    ${escapeHtml(
+                                        item.studentClass
+                                    )}
+
+                                    ${participantText}
+
+                                </p>
+
+                            </div>
+
                         </div>
 
-                        <div>
 
-                            <strong>
-                                ${escapeHtml(item.name)}
-                            </strong>
-
-                            <p>
-
-                                ${escapeHtml(item.event)}
-
-                                ·
-
-                                ${stageLabel(
-                                    item.programCategory
-                                )}
-
-                                ·
-
-                                ${sectionLabel(
-                                    item.section
-                                )}
-
-                                ·
-
-                                ${escapeHtml(
-                                    item.studentClass
-                                )}
-
-                                ${participantText}
-
-                            </p>
-
-                        </div>
-
-                    </div>
+                        <span
+                            class="
+                                team-tag
+                                ${house.tag}
+                            "
+                        >
+                            ${house.label}
+                        </span>
 
 
-                    <span
-                        class="
-                            team-tag
-                            ${house.tag}
-                        "
-                    >
-                        ${house.label}
-                    </span>
+                        <strong
+                            class="teacher-manage-medal"
+                        >
+                            ${medal(
+                                item.place
+                            )}
+                        </strong>
 
 
-                    <strong class="teacher-manage-medal">
-                        ${medal(item.place)}
-                    </strong>
+                        <strong
+                            class="teacher-manage-points"
+                        >
+                            ${resultPoints} PTS
+                        </strong>
 
 
-                    <strong class="teacher-manage-points">
-                        ${resultPoints} PTS
-                    </strong>
+                        <button
+                            type="button"
+                            class="delete-btn"
+                            data-delete-id="${escapeHtml(item.id)}"
+                        >
+                            Delete
+                        </button>
+
+                    </article>
+
+                `;
+
+            }
+        ).join('');
 
 
-                    <button
-                        type="button"
-                        class="delete-btn"
-                        data-delete-id="${escapeHtml(item.id)}"
-                    >
-                        Delete
-                    </button>
-
-                </article>
-
-            `;
-
-        }).join('');
-
+    /* =====================================================
+       DELETE RESULT BUTTONS
+       ===================================================== */
 
     list
         .querySelectorAll(
             '[data-delete-id]'
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                'click',
-                () => {
+                button.addEventListener(
+                    'click',
+                    async () => {
 
-                    const id =
-                        button.dataset.deleteId;
+                        const id =
+                            button.dataset.deleteId;
 
-                    const item =
-                        results().find(
-                            result =>
-                                result.id === id
-                        );
 
-                    if (!item) {
-                        return;
+                        const item =
+                            results().find(
+                                result =>
+                                    result.id === id
+                            );
+
+
+                        if (!item) {
+                            return;
+                        }
+
+
+                        const confirmed =
+                            confirm(
+                                `Delete the result for "${item.name}"?`
+                            );
+
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+
+                        try {
+
+                            button.disabled =
+                                true;
+
+                            button.textContent =
+                                'Deleting...';
+
+
+                            await deleteResult(
+                                id
+                            );
+
+
+                            renderManageResults();
+
+                            renderPublicResults();
+
+                            renderChampionship();
+
+
+                        } catch (error) {
+
+                            console.error(
+                                'Could not delete result:',
+                                error
+                            );
+
+
+                            alert(
+                                'The result could not be deleted from Supabase.'
+                            );
+
+
+                            button.disabled =
+                                false;
+
+                            button.textContent =
+                                'Delete';
+
+                        }
+
                     }
+                );
 
-
-                    const confirmed =
-                        confirm(
-                            `Delete the result for "${item.name}"?`
-                        );
-
-
-                    if (!confirmed) {
-                        return;
-                    }
-
-
-                    saveResults(
-                        results().filter(
-                            result =>
-                                result.id !== id
-                        )
-                    );
-
-
-                    renderManageResults();
-
-                    renderPublicResults();
-
-                    renderChampionship();
-
-                }
-            );
-
-        });
+            }
+        );
 
 }
 
@@ -3037,6 +3749,7 @@ function setupTeacherAuth() {
         document.querySelector(
             '#login-form'
         );
+
 
     if (!form) {
         return;
@@ -3068,6 +3781,7 @@ function setupTeacherAuth() {
                     'input[type="password"]'
                 );
 
+
             const message =
                 document.querySelector(
                     '#login-message'
@@ -3097,6 +3811,7 @@ function setupTeacherAuth() {
                 message.textContent =
                     'Incorrect teacher code. Please try again.';
 
+
                 message.classList.remove(
                     'hidden'
                 );
@@ -3121,39 +3836,62 @@ function setupTeacherAuth() {
 const spotlightData = {
 
     music: {
+
         number: '01',
+
         title: 'Music',
+
         copy:
             'From classical voice to instrumental expression — hear every student find their own rhythm.',
+
         cta:
             'Explore music'
+
     },
+
 
     dance: {
+
         number: '02',
+
         title: 'Dance',
+
         copy:
             'Energy, precision and storytelling come together on one stage across traditional and contemporary forms.',
+
         cta:
             'Explore dance'
+
     },
+
 
     literary: {
+
         number: '03',
+
         title: 'Literary',
+
         copy:
             'Words become performance through recitation, writing, speech and dramatic expression.',
+
         cta:
             'Explore literary'
+
     },
 
+
     art: {
+
         number: '04',
+
         title: 'Visual Arts',
+
         copy:
             'Colour, line and imagination turn blank surfaces into work worth remembering.',
+
         cta:
             'Explore visual arts'
+
     }
 
 };
@@ -3165,6 +3903,7 @@ function setupSpotlight() {
         document.querySelector(
             '#spotlight-card'
         );
+
 
     if (!card) {
         return;
@@ -3192,57 +3931,73 @@ function setupSpotlight() {
                 ${data.number}
             </div>
 
+
             <div>
 
                 <h3>
-                    ${escapeHtml(data.title)}
+                    ${escapeHtml(
+                        data.title
+                    )}
                 </h3>
 
+
                 <p>
-                    ${escapeHtml(data.copy)}
+                    ${escapeHtml(
+                        data.copy
+                    )}
                 </p>
 
             </div>
+
 
             <a
                 class="btn ghost"
                 href="programs.html"
             >
-                ${escapeHtml(data.cta)} →
+                ${escapeHtml(
+                    data.cta
+                )} →
             </a>
 
         `;
 
 
-        tabs.forEach(tab => {
+        tabs.forEach(
+            tab => {
 
-            tab.classList.toggle(
-                'active',
-                tab.dataset.spotlight === key
-            );
-
-        });
-
-    }
-
-
-    tabs.forEach(tab => {
-
-        tab.addEventListener(
-            'click',
-            () => {
-
-                show(
-                    tab.dataset.spotlight
+                tab.classList.toggle(
+                    'active',
+                    tab.dataset.spotlight ===
+                        key
                 );
 
             }
         );
 
-    });
+    }
 
 
-    show('music');
+    tabs.forEach(
+        tab => {
+
+            tab.addEventListener(
+                'click',
+                () => {
+
+                    show(
+                        tab.dataset.spotlight
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    show(
+        'music'
+    );
 
 }
 
@@ -3265,30 +4020,35 @@ function setupAboutPage() {
 
 
     if (
-        'IntersectionObserver' in window
+        'IntersectionObserver'
+        in window
     ) {
 
         const observer =
             new IntersectionObserver(
                 entries => {
 
-                    entries.forEach(entry => {
+                    entries.forEach(
+                        entry => {
 
-                        if (
-                            !entry.isIntersecting
-                        ) {
-                            return;
+                            if (
+                                !entry.isIntersecting
+                            ) {
+                                return;
+                            }
+
+
+                            entry.target.classList.add(
+                                'about-visible'
+                            );
+
+
+                            observer.unobserve(
+                                entry.target
+                            );
+
                         }
-
-                        entry.target.classList.add(
-                            'about-visible'
-                        );
-
-                        observer.unobserve(
-                            entry.target
-                        );
-
-                    });
+                    );
 
                 },
                 {
@@ -3297,19 +4057,27 @@ function setupAboutPage() {
             );
 
 
-        revealItems.forEach(item => {
-            observer.observe(item);
-        });
+        revealItems.forEach(
+            item => {
+
+                observer.observe(
+                    item
+                );
+
+            }
+        );
 
     } else {
 
-        revealItems.forEach(item => {
+        revealItems.forEach(
+            item => {
 
-            item.classList.add(
-                'about-visible'
-            );
+                item.classList.add(
+                    'about-visible'
+                );
 
-        });
+            }
+        );
 
     }
 
@@ -3321,10 +4089,14 @@ function setupAboutPage() {
 
 
     skillCards.forEach(
-        (card, index) => {
+        (
+            card,
+            index
+        ) => {
 
             card.style.transitionDelay =
                 `${index * 80}ms`;
+
 
             card.addEventListener(
                 'mouseenter',
@@ -3363,13 +4135,16 @@ function setupAboutPage() {
 
                 const x =
                     (
-                        window.innerWidth / 2 -
+                        window.innerWidth /
+                            2 -
                         event.clientX
                     ) / 70;
 
+
                 const y =
                     (
-                        window.innerHeight / 2 -
+                        window.innerHeight /
+                            2 -
                         event.clientY
                     ) / 70;
 
@@ -3387,12 +4162,15 @@ function setupAboutPage() {
         .querySelectorAll(
             '[data-current-year]'
         )
-        .forEach(element => {
+        .forEach(
+            element => {
 
-            element.textContent =
-                new Date().getFullYear();
+                element.textContent =
+                    new Date()
+                        .getFullYear();
 
-        });
+            }
+        );
 
 }
 
@@ -3407,19 +4185,30 @@ function setupKeyboardControls() {
         'keydown',
         event => {
 
-            if (event.key !== 'Escape') {
+            if (
+                event.key !==
+                'Escape'
+            ) {
                 return;
             }
 
 
             const nav =
-                document.querySelector('.nav');
+                document.querySelector(
+                    '.nav'
+                );
+
 
             const toggle =
-                document.querySelector('.nav-toggle');
+                document.querySelector(
+                    '.nav-toggle'
+                );
 
 
-            nav?.classList.remove('open');
+            nav?.classList.remove(
+                'open'
+            );
+
 
             toggle?.setAttribute(
                 'aria-expanded',
@@ -3433,12 +4222,16 @@ function setupKeyboardControls() {
 
 
 /* =========================================================
-   START EVERYTHING
+   APPLICATION STARTUP
    ========================================================= */
 
 document.addEventListener(
     'DOMContentLoaded',
-    () => {
+    async () => {
+
+        /* =================================================
+           BASIC PAGE SETUP
+           ================================================= */
 
         setupNav();
 
@@ -3446,20 +4239,41 @@ document.addEventListener(
 
         setupReveal();
 
-        renderPublicResults();
-
-        renderChampionship();
-
-        setupTeacherAuth();
-
         setupSpotlight();
 
         setupAboutPage();
 
         setupKeyboardControls();
 
+
+        /* =================================================
+           LOAD LIVE RESULTS FROM SUPABASE
+           ================================================= */
+
+        await loadResults();
+
+
+        /* =================================================
+           RENDER LIVE RESULTS
+           ================================================= */
+
+        renderPublicResults();
+
+        renderChampionship();
+
+
+        /* =================================================
+           TEACHER AUTHENTICATION
+           ================================================= */
+
+        setupTeacherAuth();
+
+
+        /* =================================================
+           REALTIME DATABASE SYNC
+           ================================================= */
+
+        setupRealtimeResults();
+
     }
 );
-await supabaseClient
-    .from("results")
-    .insert(...)
