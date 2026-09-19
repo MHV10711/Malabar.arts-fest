@@ -1,11 +1,19 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>MIS Art Fest | Teacher Portal</title>
 
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -14,19 +22,29 @@
         rel="stylesheet"
     >
 
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
-   
 
 </head>
 
+
 <body>
+
 
 <header class="site-header">
 
     <a href="index.html" class="brand">
-        <span class="brand-mark">MIS</span>
-        <span>ART <b>FEST</b></span>
+
+        <span class="brand-mark">
+            MIS
+        </span>
+
+        <span>
+            ART <b>FEST</b>
+        </span>
+
     </a>
+
 
     <button
         class="nav-toggle"
@@ -37,25 +55,52 @@
         ☰
     </button>
 
+
     <nav class="nav">
 
-        <a href="index.html">Home</a>
-        <a href="results.html">Results</a>
-        <a href="programs.html">Programs</a>
-        <a href="championship.html">Championship</a>
-        <a href="teacher.html" class="teacher-link active">Teacher Portal</a>
-        <a href="about.html">ABOUT ME</a>
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="results.html">
+            Results
+        </a>
+
+        <a href="programs.html">
+            Programs
+        </a>
+
+        <a href="championship.html">
+            Championship
+        </a>
+
+        <a
+            href="teacher.html"
+            class="teacher-link active"
+        >
+            Teacher Portal
+        </a>
+
+        <a href="about.html">
+            ABOUT ME
+        </a>
 
     </nav>
 
 </header>
 
 
+
 <main>
+
+
+    <!-- PAGE HERO -->
 
     <section class="page-hero reveal">
 
-        <p class="eyebrow">EVENT COORDINATORS</p>
+        <p class="eyebrow">
+            EVENT COORDINATORS
+        </p>
 
         <h1>
             Teacher <span>portal.</span>
@@ -69,31 +114,50 @@
     </section>
 
 
+
+    <!-- TEACHER PORTAL -->
+
     <section class="section portal-section reveal">
 
-        <!-- LOGIN -->
-        <article class="auth-card" id="teacher-login-card">
 
-            <p class="eyebrow">RESTRICTED ACCESS</p>
+        <!-- LOGIN CARD -->
 
-            <h2>Sign in</h2>
+        <article
+            class="auth-card"
+            id="teacher-login-card"
+        >
+
+            <p class="eyebrow">
+                RESTRICTED ACCESS
+            </p>
+
+            <h2>
+                Sign in
+            </h2>
 
             <p class="portal-help">
                 This area is for Art Fest teachers and coordinators only.
             </p>
 
+
             <form id="login-form">
 
+
                 <label>
+
                     Teacher access code
 
                     <input
                         type="password"
+                        name="password"
+                        id="teacher-password"
                         required
                         autocomplete="current-password"
                         placeholder="Enter access code"
                     >
+
                 </label>
+
 
                 <button
                     class="btn primary full"
@@ -102,19 +166,24 @@
                     Enter portal →
                 </button>
 
+
                 <small
                     class="error hidden"
                     id="login-message"
                     aria-live="polite"
                 ></small>
 
+
             </form>
 
         </article>
 
+
     </section>
 
+
 </main>
+
 
 
 <footer>
@@ -128,10 +197,25 @@
     </div>
 
 </footer>
-<script src="https://jlitghsdscahpxjfywnr.supabase.co"></script>
-<script src="supabase.js"></script>
-<script src="app.js"></script>
+
+
+
+<!-- =====================================================
+     SUPABASE
+     IMPORTANT: ORDER MUST NOT BE CHANGED
+===================================================== -->
+
+<!-- 1. Supabase JavaScript library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 2. Your Supabase configuration -->
+<script src="./supabase.js"></script>
+
+<!-- 3. Your main application -->
+<script src="./app.js"></script>
 
 
 </body>
+
 </html>
+```
