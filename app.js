@@ -3261,44 +3261,29 @@ function closeTeacherResultEntry() {
 
 }
 
-
 /* =========================================================
    SUBMIT TEACHER RESULT
    ========================================================= */
 
-async function submitTeacherResult(
-    submitEvent
-) {
+async function submitTeacherResult(submitEvent) {
 
     submitEvent.preventDefault();
 
-
     if (!selectedTeacherProgram) {
+        alert('Please select a program first.');
         return;
     }
 
+    const form = new FormData(submitEvent.currentTarget);
 
-    const form =
-        new FormData(
-            submitEvent.currentTarget
-        );
-
-
-    const program =
-        selectedTeacherProgram.program;
-
+    const program = selectedTeacherProgram.program;
 
     const participantValue =
-        form.get(
-            'participantCount'
-        );
-
+        form.get('participantCount');
 
     const participantCount =
         participantValue
-            ? Number(
-                participantValue
-            )
+            ? Number(participantValue)
             : null;
 
 
@@ -3311,8 +3296,7 @@ async function submitTeacherResult(
         (
             !participantCount ||
             participantCount < 1 ||
-            participantCount >
-                program.maxParticipants
+            participantCount > program.maxParticipants
         )
     ) {
 
@@ -3320,9 +3304,7 @@ async function submitTeacherResult(
             `This program allows a maximum of ${program.maxParticipants} participants.`
         );
 
-
         return;
-
     }
 
 
@@ -3331,38 +3313,30 @@ async function submitTeacherResult(
        ===================================================== */
 
     const finalSection =
-        selectedTeacherProgram.section ===
-            'GENERAL'
-
+        selectedTeacherProgram.section === 'GENERAL'
             ? 'GENERAL'
-
             : String(
-                form.get(
-                    'section'
-                ) ||
+                form.get('section') ||
                 selectedTeacherProgram.section
             );
 
 
+    /* =====================================================
+       CREATE RESULT OBJECT
+       ===================================================== */
+
     const item = {
 
-        id:
-            createId(),
+        id: createId(),
 
         name:
             String(
-                form.get(
-                    'name'
-                ) ||
-                ''
+                form.get('name') || ''
             ).trim(),
 
         studentClass:
             String(
-                form.get(
-                    'studentClass'
-                ) ||
-                ''
+                form.get('studentClass') || ''
             ).trim(),
 
         section:
@@ -3381,22 +3355,16 @@ async function submitTeacherResult(
 
         team:
             String(
-                form.get(
-                    'team'
-                ) ||
-                ''
-            ),
+                form.get('team') || ''
+            ).trim(),
 
         place:
             String(
-                form.get(
-                    'place'
-                ) ||
-                ''
-            ),
+                form.get('place') || ''
+            ).trim(),
 
-        participantCount
-
+        participantCount:
+            participantCount
     };
 
 
@@ -3415,14 +3383,12 @@ async function submitTeacherResult(
             'Please complete all required fields.'
         );
 
-
         return;
-
     }
 
 
     /* =====================================================
-       DISABLE BUTTON WHILE SAVING
+       DISABLE SUBMIT BUTTON
        ===================================================== */
 
     const submitButton =
@@ -3430,28 +3396,71 @@ async function submitTeacherResult(
             'button[type="submit"]'
         );
 
-
     if (submitButton) {
 
-        submitButton.disabled =
-            true;
+        submitButton.disabled = true;
 
         submitButton.textContent =
             'Publishing...';
-
     }
 
 
     /* =====================================================
-       SAVE TO SUPABASE
+       SAVE RESULT TO SUPABASE
        ===================================================== */
 
     try {
 
-        await saveResult(
+        console.log(
+            'Attempting to save result:',
             item
         );
 
+
+        /* ---------------------------------------------
+           CHECK SUPABASE LIBRARY
+        --------------------------------------------- */
+
+        if (!window.supabase) {
+
+            throw new Error(
+                'Supabase library was not loaded. Check the Supabase CDN script in your HTML.'
+            );
+        }
+
+
+        /* ---------------------------------------------
+           CHECK SUPABASE CLIENT
+        --------------------------------------------- */
+
+        if (
+            typeof supabaseClient === 'undefined' ||
+            !supabaseClient
+        ) {
+
+            throw new Error(
+                'Supabase client was not created. Check supabase.js and make sure it loads before app.js.'
+            );
+        }
+
+
+        /* ---------------------------------------------
+           SAVE
+        --------------------------------------------- */
+
+        const savedResult =
+            await saveResult(item);
+
+
+        console.log(
+            'Result successfully saved:',
+            savedResult
+        );
+
+
+        /* =================================================
+           SUCCESS MESSAGE
+           ================================================= */
 
         const message =
             document.querySelector(
@@ -3464,12 +3473,17 @@ async function submitTeacherResult(
             message.textContent =
                 '✓ Result published successfully to the live database.';
 
-
             message.classList.add(
                 'success'
             );
-
         }
+
+
+        /* =================================================
+           REFRESH WEBSITE DATA
+           ================================================= */
+
+        await loadResults();
 
 
         renderManageResults();
@@ -3479,13 +3493,12 @@ async function submitTeacherResult(
         renderChampionship();
 
 
-        /*
-         * Keep selected program open.
-         */
+        /* =================================================
+           RESET FORM
+           ================================================= */
 
         const currentForm =
             submitEvent.currentTarget;
-
 
         currentForm.reset();
 
@@ -3494,7 +3507,6 @@ async function submitTeacherResult(
             currentForm.querySelector(
                 '[name="team"]'
             );
-
 
         if (team) {
             team.value = '';
@@ -3506,23 +3518,39 @@ async function submitTeacherResult(
                 '[name="place"]'
             );
 
-
         if (place) {
             place.value = '';
         }
 
 
-        currentForm
-            .querySelector(
+        const participantInput =
+            currentForm.querySelector(
+                '[name="participantCount"]'
+            );
+
+        if (participantInput) {
+            participantInput.value = '';
+        }
+
+
+        const nameInput =
+            currentForm.querySelector(
                 '[name="name"]'
-            )
-            ?.focus();
+            );
+
+        if (nameInput) {
+            nameInput.focus();
+        }
 
 
     } catch (error) {
 
+        /* =================================================
+           DETAILED ERROR HANDLING
+           ================================================= */
+
         console.error(
-            'Could not publish result:',
+            'SUPABASE SAVE ERROR:',
             error
         );
 
@@ -3533,25 +3561,71 @@ async function submitTeacherResult(
             );
 
 
+        const errorMessage =
+            error &&
+            error.message
+                ? error.message
+                : String(error);
+
+
+        const errorCode =
+            error &&
+            error.code
+                ? `\n\nCode: ${error.code}`
+                : '';
+
+
+        const errorDetails =
+            error &&
+            error.details
+                ? `\n\nDetails: ${error.details}`
+                : '';
+
+
+        const errorHint =
+            error &&
+            error.hint
+                ? `\n\nHint: ${error.hint}`
+                : '';
+
+
+        const fullError =
+            errorMessage +
+            errorCode +
+            errorDetails +
+            errorHint;
+
+
+        /* ---------------------------------------------
+           SHOW ERROR ON PAGE
+        --------------------------------------------- */
+
         if (message) {
 
             message.textContent =
-                `✕ Could not publish result: ${error.message}`;
-
+                `✕ Could not publish result: ${fullError}`;
 
             message.classList.remove(
                 'success'
             );
-
         }
 
 
+        /* ---------------------------------------------
+           SHOW ERROR IN ALERT
+        --------------------------------------------- */
+
         alert(
-            'The result could not be saved to Supabase. Check the browser console for details.'
+            'THE RESULT COULD NOT BE SAVED.\n\n' +
+            fullError
         );
 
 
     } finally {
+
+        /* =================================================
+           RE-ENABLE BUTTON
+           ================================================= */
 
         if (submitButton) {
 
@@ -3560,13 +3634,11 @@ async function submitTeacherResult(
 
             submitButton.textContent =
                 'Publish Result →';
-
         }
 
     }
 
 }
-
 
 /* =========================================================
    MANAGE / PUBLISHED RESULTS
