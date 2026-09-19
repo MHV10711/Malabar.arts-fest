@@ -1,7 +1,7 @@
 /* =========================================================
    MIS ART FEST 2026
    MAIN JAVASCRIPT
-   SUPABASE DATABASE VERSION
+   COMPLETE SUPABASE VERSION
    ========================================================= */
 
 
@@ -11,7 +11,8 @@
 
 const TEACHER_PASSWORD = 'malabar@5445';
 
-const SESSION_KEY = 'mis-art-fest-teacher-session';
+const SESSION_KEY =
+    'mis-art-fest-teacher-session';
 
 
 /* =========================================================
@@ -55,12 +56,12 @@ const HOUSE_INFO = {
    POINT SYSTEM
    =========================================================
 
-   INDIVIDUAL:
+   INDIVIDUAL
    1st = 5
    2nd = 3
    3rd = 1
 
-   GROUP:
+   GROUP
    1st = 10
    2nd = 5
    3rd = 3
@@ -560,10 +561,6 @@ const PROGRAMS = {
 
         ],
 
-        /* =================================================
-           GENERAL
-           ================================================= */
-
         GENERAL: [
 
             {
@@ -601,7 +598,9 @@ function createId() {
         window.crypto &&
         typeof window.crypto.randomUUID === 'function'
     ) {
+
         return `result-${window.crypto.randomUUID()}`;
+
     }
 
     return `result-${Date.now()}-${Math.random()
@@ -629,9 +628,13 @@ function escapeHtml(value) {
 
 function titleCase(value) {
 
-    const text = String(value || '');
+    const text =
+        String(value || '');
 
-    return text.charAt(0).toUpperCase() + text.slice(1);
+    return (
+        text.charAt(0).toUpperCase() +
+        text.slice(1)
+    );
 
 }
 
@@ -639,9 +642,11 @@ function titleCase(value) {
 function placeNumber(place) {
 
     return {
+
         first: '01',
         second: '02',
         third: '03'
+
     }[place] || '—';
 
 }
@@ -650,9 +655,11 @@ function placeNumber(place) {
 function medal(place) {
 
     return {
+
         first: 'Gold',
         second: 'Silver',
         third: 'Bronze'
+
     }[place] || '';
 
 }
@@ -673,7 +680,10 @@ function sectionLabel(section) {
         return 'GENERAL';
     }
 
-    return SECTION_INFO[section]?.label || section;
+    return (
+        SECTION_INFO[section]?.label ||
+        section
+    );
 
 }
 
@@ -684,13 +694,16 @@ function sectionFullName(section) {
         return 'General';
     }
 
-    return SECTION_INFO[section]?.full || section;
+    return (
+        SECTION_INFO[section]?.full ||
+        section
+    );
 
 }
 
 
 /* =========================================================
-   SUPABASE RESULT DATA
+   RESULT CACHE
    ========================================================= */
 
 let RESULTS_CACHE = [];
@@ -699,7 +712,7 @@ let RESULTS_LOADED = false;
 
 
 /* =========================================================
-   NORMALISE RESULT
+   NORMALISE DATABASE RESULT
    ========================================================= */
 
 function normaliseResult(item) {
@@ -744,26 +757,41 @@ function normaliseResult(item) {
         );
 
 
+    const name =
+        item.name ??
+        item.student_name ??
+        'Unnamed';
+
+
+    const event =
+        item.event ??
+        item.program ??
+        'General Event';
+
+
     return {
 
-        id: String(
-            item.id ||
-            createId()
-        ),
+        id:
+            String(
+                item.id ||
+                createId()
+            ),
 
-        name: String(
-            item.name ||
-            'Unnamed'
-        ),
+        name:
+            String(name),
 
-        studentClass: String(
-            item.studentClass ??
-            item.student_class ??
-            '—'
-        ),
+        studentClass:
+            String(
+                item.studentClass ??
+                item.student_class ??
+                item.class_name ??
+                '—'
+            ),
 
         section:
-            validSections.includes(item.section)
+            validSections.includes(
+                item.section
+            )
                 ? item.section
                 : 'HS',
 
@@ -789,23 +817,27 @@ function normaliseResult(item) {
                 )
                 : 'on-stage',
 
-        event: String(
-            item.event ||
-            'General Event'
-        ),
+        event:
+            String(event),
 
         team:
-            validTeams.includes(item.team)
+            validTeams.includes(
+                item.team
+            )
                 ? item.team
                 : 'red',
 
         place:
-            validPlaces.includes(item.place)
+            validPlaces.includes(
+                item.place
+            )
                 ? item.place
                 : 'third',
 
         participantCount:
-            Number.isFinite(participantCount) &&
+            Number.isFinite(
+                participantCount
+            ) &&
             participantCount > 0
                 ? participantCount
                 : null
@@ -837,7 +869,8 @@ async function loadResults() {
     try {
 
         if (
-            typeof supabaseClient === 'undefined'
+            typeof supabaseClient ===
+            'undefined'
         ) {
 
             throw new Error(
@@ -906,23 +939,46 @@ async function loadResults() {
 
 
 /* =========================================================
-   SAVE ONE RESULT TO SUPABASE
+   SAVE RESULT TO SUPABASE
+   =========================================================
+
+   IMPORTANT:
+   Your current database contains legacy NOT NULL
+   columns named:
+
+       student_name
+       program
+
+   Therefore this function sends BOTH the new fields
+   and the legacy fields.
+
    ========================================================= */
 
 async function saveResult(item) {
 
     try {
 
-        if (!window.supabase) {
+        if (
+            !window.supabase
+        ) {
+
             throw new Error(
-                "Supabase library was not loaded."
+                'Supabase library was not loaded.'
             );
+
         }
 
-        if (!supabaseClient) {
+
+        if (
+            typeof supabaseClient ===
+            'undefined' ||
+            !supabaseClient
+        ) {
+
             throw new Error(
-                "Supabase client was not created."
+                'Supabase client was not created.'
             );
+
         }
 
 
@@ -930,10 +986,16 @@ async function saveResult(item) {
             normaliseResult(item);
 
 
+        /* =================================================
+           DATABASE ROW
+           ================================================= */
+
         const databaseRow = {
 
             id:
                 result.id,
+
+            /* Current columns */
 
             name:
                 result.name,
@@ -960,13 +1022,23 @@ async function saveResult(item) {
                 result.place,
 
             participant_count:
-                result.participantCount
+                result.participantCount,
+
+
+            /* Legacy columns currently required
+               by your Supabase table */
+
+            student_name:
+                result.name,
+
+            program:
+                result.event
 
         };
 
 
         console.log(
-            "Sending result to Supabase:",
+            'Sending result to Supabase:',
             databaseRow
         );
 
@@ -987,22 +1059,29 @@ async function saveResult(item) {
         if (error) {
 
             console.error(
-                "SUPABASE INSERT ERROR:",
+                'SUPABASE INSERT ERROR:',
                 error
             );
 
+
             throw new Error(
-                "Supabase error: " +
+                'Supabase error: ' +
                 error.message +
-                (error.code
-                    ? " | Code: " + error.code
-                    : "") +
-                (error.details
-                    ? " | Details: " + error.details
-                    : "") +
-                (error.hint
-                    ? " | Hint: " + error.hint
-                    : "")
+                (
+                    error.code
+                        ? ` | Code: ${error.code}`
+                        : ''
+                ) +
+                (
+                    error.details
+                        ? ` | Details: ${error.details}`
+                        : ''
+                ) +
+                (
+                    error.hint
+                        ? ` | Hint: ${error.hint}`
+                        : ''
+                )
             );
 
         }
@@ -1020,13 +1099,13 @@ async function saveResult(item) {
 
         return saved;
 
-
     } catch (error) {
 
         console.error(
-            "SAVE RESULT ERROR:",
+            'SAVE RESULT ERROR:',
             error
         );
+
 
         throw error;
 
@@ -1034,11 +1113,25 @@ async function saveResult(item) {
 
 }
 
+
 /* =========================================================
-   DELETE RESULT FROM SUPABASE
+   DELETE RESULT
    ========================================================= */
 
 async function deleteResult(id) {
+
+    if (
+        typeof supabaseClient ===
+        'undefined' ||
+        !supabaseClient
+    ) {
+
+        throw new Error(
+            'Supabase client is not available.'
+        );
+
+    }
+
 
     const {
         error
@@ -1080,7 +1173,9 @@ async function deleteResult(id) {
 function setupRealtimeResults() {
 
     if (
-        typeof supabaseClient === 'undefined'
+        typeof supabaseClient ===
+        'undefined' ||
+        !supabaseClient
     ) {
 
         console.error(
@@ -1182,32 +1277,34 @@ function setupNav() {
 
     nav
         .querySelectorAll('a')
-        .forEach(link => {
+        .forEach(
+            link => {
 
-            link.addEventListener(
-                'click',
-                () => {
+                link.addEventListener(
+                    'click',
+                    () => {
 
-                    nav.classList.remove(
-                        'open'
-                    );
+                        nav.classList.remove(
+                            'open'
+                        );
 
 
-                    toggle.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
+                        toggle.setAttribute(
+                            'aria-expanded',
+                            'false'
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
 }
 
 
 /* =========================================================
-   ACTIVE NAV
+   ACTIVE NAVIGATION
    ========================================================= */
 
 function setupActiveNav() {
@@ -1220,21 +1317,25 @@ function setupActiveNav() {
 
 
     document
-        .querySelectorAll('.nav a')
-        .forEach(link => {
+        .querySelectorAll(
+            '.nav a'
+        )
+        .forEach(
+            link => {
 
-            const page =
-                link.getAttribute(
-                    'href'
+                const page =
+                    link.getAttribute(
+                        'href'
+                    );
+
+
+                link.classList.toggle(
+                    'active',
+                    page === currentPage
                 );
 
-
-            link.classList.toggle(
-                'active',
-                page === currentPage
-            );
-
-        });
+            }
+        );
 
 }
 
@@ -1345,25 +1446,30 @@ function renderPublicResults() {
         results();
 
 
+    const empty =
+        document.querySelector(
+            '#empty-results'
+        );
+
+
     if (!items.length) {
 
         list.innerHTML = '';
 
-
-        document
-            .querySelector(
-                '#empty-results'
-            )
-            ?.classList.remove(
-                'hidden'
-            );
-
+        empty?.classList.remove(
+            'hidden'
+        );
 
         setupResultFilters();
 
         return;
 
     }
+
+
+    empty?.classList.add(
+        'hidden'
+    );
 
 
     list.innerHTML =
@@ -1490,37 +1596,32 @@ function setupResultFilters() {
         );
 
 
-    const sectionButtons =
-        [
-            ...document.querySelectorAll(
-                '.section-card[data-section]'
-            )
-        ];
+    const sectionButtons = [
+        ...document.querySelectorAll(
+            '.section-card[data-section]'
+        )
+    ];
 
 
-    const activityButtons =
-        [
-            ...document.querySelectorAll(
-                '.activity-card[data-activity]'
-            )
-        ];
+    const activityButtons = [
+        ...document.querySelectorAll(
+            '.activity-card[data-activity]'
+        )
+    ];
 
 
-    const stageButtons =
-        [
-            ...document.querySelectorAll(
-                '[data-result-stage]'
-            )
-        ];
+    const stageButtons = [
+        ...document.querySelectorAll(
+            '[data-result-stage]'
+        )
+    ];
 
 
     let selectedSection =
         'all';
 
-
     let selectedActivity =
         'all';
-
 
     let selectedStage =
         'all';
@@ -1779,7 +1880,7 @@ function setupResultFilters() {
 
 
 /* =========================================================
-   CHAMPIONSHIP
+   CHAMPIONSHIP POINTS
    ========================================================= */
 
 function pointsByHouse() {
@@ -1787,11 +1888,8 @@ function pointsByHouse() {
     const totals = {
 
         red: 0,
-
         green: 0,
-
         blue: 0,
-
         yellow: 0
 
     };
@@ -1825,7 +1923,9 @@ function pointsByHouse() {
                 if (
                     b[1] !== a[1]
                 ) {
+
                     return b[1] - a[1];
+
                 }
 
 
@@ -2109,7 +2209,7 @@ let selectedTeacherProgram =
 
 
 /* =========================================================
-   PROGRAM CARD
+   PROGRAM BUTTON
    ========================================================= */
 
 function programButton(
@@ -2165,15 +2265,12 @@ function programButton(
 
 
                 <small>
-
                     ${typeText}
-
                     ${
                         limitText
                             ? ` · ${limitText}`
                             : ''
                     }
-
                 </small>
 
             </span>
@@ -2193,7 +2290,7 @@ function programButton(
 
 
 /* =========================================================
-   SECTION CARD
+   SECTION PROGRAM CARD
    ========================================================= */
 
 function sectionProgramCard(
@@ -2236,7 +2333,6 @@ function sectionProgramCard(
                     class="teacher-program-count"
                 >
                     ${programs.length}
-
                     ${
                         programs.length === 1
                             ? 'program'
@@ -2286,7 +2382,7 @@ function sectionProgramCard(
 
 
 /* =========================================================
-   GENERAL CARD
+   GENERAL PROGRAM CARD
    ========================================================= */
 
 function generalProgramCard(
@@ -2432,9 +2528,7 @@ function teacherDashboard() {
             </div>
 
 
-            <!-- =========================================
-                 OFF-STAGE
-                 ========================================= -->
+            <!-- OFF-STAGE -->
 
             <section
                 class="teacher-stage-block"
@@ -2473,7 +2567,6 @@ function teacherDashboard() {
                     <span
                         class="teacher-stage-count"
                     >
-
                         ${
                             Object.values(
                                 PROGRAMS['off-stage']
@@ -2488,9 +2581,7 @@ function teacherDashboard() {
                                     0
                                 )
                         }
-
                         programs
-
                     </span>
 
                 </div>
@@ -2539,9 +2630,7 @@ function teacherDashboard() {
             </section>
 
 
-            <!-- =========================================
-                 ON-STAGE
-                 ========================================= -->
+            <!-- ON-STAGE -->
 
             <section
                 class="teacher-stage-block"
@@ -2580,16 +2669,13 @@ function teacherDashboard() {
                     <span
                         class="teacher-stage-count"
                     >
-
                         ${
                             PROGRAMS['on-stage'].UP.length +
                             PROGRAMS['on-stage'].HS.length +
                             PROGRAMS['on-stage'].HSS.length +
                             PROGRAMS['on-stage'].GENERAL.length
                         }
-
                         programs
-
                     </span>
 
                 </div>
@@ -2630,9 +2716,7 @@ function teacherDashboard() {
             </section>
 
 
-            <!-- =========================================
-                 RESULT ENTRY
-                 ========================================= -->
+            <!-- RESULT ENTRY -->
 
             <div
                 id="teacher-result-entry"
@@ -2663,9 +2747,7 @@ function teacherDashboard() {
             </div>
 
 
-            <!-- =========================================
-                 PUBLISHED RESULTS
-                 ========================================= -->
+            <!-- PUBLISHED RESULTS -->
 
             <section
                 class="teacher-published-section"
@@ -2769,7 +2851,11 @@ function setupTeacherProgramButtons() {
 
 
                         const programList =
-                            PROGRAMS[stage]?.[section];
+                            PROGRAMS[
+                                stage
+                            ]?.[
+                                section
+                            ];
 
 
                         if (!programList) {
@@ -2802,7 +2888,7 @@ function setupTeacherProgramButtons() {
 
 
 /* =========================================================
-   OPEN RESULT ENTRY
+   OPEN TEACHER RESULT ENTRY
    ========================================================= */
 
 function openTeacherResultEntry(
@@ -2814,9 +2900,7 @@ function openTeacherResultEntry(
     selectedTeacherProgram = {
 
         stage,
-
         section,
-
         program
 
     };
@@ -2990,21 +3074,17 @@ function openTeacherResultEntry(
                                 Select house
                             </option>
 
-
                             <option value="red">
                                 Crimson / Red
                             </option>
-
 
                             <option value="green">
                                 Verdant / Green
                             </option>
 
-
                             <option value="blue">
                                 Azure / Blue
                             </option>
-
 
                             <option value="yellow">
                                 Solar / Yellow
@@ -3014,10 +3094,6 @@ function openTeacherResultEntry(
 
                     </label>
 
-
-                    <!-- =====================================
-                         PLACE / POINTS
-                         ===================================== -->
 
                     <label>
 
@@ -3042,11 +3118,9 @@ function openTeacherResultEntry(
                                             First — 10 points
                                         </option>
 
-
                                         <option value="second">
                                             Second — 5 points
                                         </option>
-
 
                                         <option value="third">
                                             Third — 3 points
@@ -3059,11 +3133,9 @@ function openTeacherResultEntry(
                                             First — 5 points
                                         </option>
 
-
                                         <option value="second">
                                             Second — 3 points
                                         </option>
-
 
                                         <option value="third">
                                             Third — 1 point
@@ -3214,7 +3286,7 @@ function openTeacherResultEntry(
 
 
 /* =========================================================
-   CLOSE ENTRY
+   CLOSE RESULT ENTRY
    ========================================================= */
 
 function closeTeacherResultEntry() {
@@ -3261,29 +3333,85 @@ function closeTeacherResultEntry() {
 
 }
 
+
 /* =========================================================
    SUBMIT TEACHER RESULT
+   =========================================================
+
+   IMPORTANT FIX:
+   We save currentForm BEFORE any await.
+
+   This prevents:
+
+       can't access property "reset",
+       currentForm is null
+
    ========================================================= */
 
-async function submitTeacherResult(submitEvent) {
+async function submitTeacherResult(
+    submitEvent
+) {
 
     submitEvent.preventDefault();
 
+
+    /* =====================================================
+       CHECK PROGRAM
+       ===================================================== */
+
     if (!selectedTeacherProgram) {
-        alert('Please select a program first.');
+
+        alert(
+            'Please select a program first.'
+        );
+
         return;
     }
 
-    const form = new FormData(submitEvent.currentTarget);
 
-    const program = selectedTeacherProgram.program;
+    /* =====================================================
+       SAVE FORM REFERENCE BEFORE AWAIT
+       ===================================================== */
+
+    const currentForm =
+        submitEvent.currentTarget;
+
+
+    if (!currentForm) {
+
+        alert(
+            'Could not access the result form. Please refresh the page and try again.'
+        );
+
+        return;
+    }
+
+
+    /* =====================================================
+       READ FORM DATA
+       ===================================================== */
+
+    const form =
+        new FormData(
+            currentForm
+        );
+
+
+    const program =
+        selectedTeacherProgram.program;
+
 
     const participantValue =
-        form.get('participantCount');
+        form.get(
+            'participantCount'
+        );
+
 
     const participantCount =
         participantValue
-            ? Number(participantValue)
+            ? Number(
+                participantValue
+            )
             : null;
 
 
@@ -3296,7 +3424,8 @@ async function submitTeacherResult(submitEvent) {
         (
             !participantCount ||
             participantCount < 1 ||
-            participantCount > program.maxParticipants
+            participantCount >
+                program.maxParticipants
         )
     ) {
 
@@ -3309,14 +3438,17 @@ async function submitTeacherResult(submitEvent) {
 
 
     /* =====================================================
-       FORCE GENERAL TO REMAIN GENERAL
+       SECTION
        ===================================================== */
 
     const finalSection =
-        selectedTeacherProgram.section === 'GENERAL'
+        selectedTeacherProgram.section ===
+            'GENERAL'
             ? 'GENERAL'
             : String(
-                form.get('section') ||
+                form.get(
+                    'section'
+                ) ||
                 selectedTeacherProgram.section
             );
 
@@ -3327,16 +3459,21 @@ async function submitTeacherResult(submitEvent) {
 
     const item = {
 
-        id: createId(),
+        id:
+            createId(),
 
         name:
             String(
-                form.get('name') || ''
+                form.get(
+                    'name'
+                ) || ''
             ).trim(),
 
         studentClass:
             String(
-                form.get('studentClass') || ''
+                form.get(
+                    'studentClass'
+                ) || ''
             ).trim(),
 
         section:
@@ -3355,16 +3492,21 @@ async function submitTeacherResult(submitEvent) {
 
         team:
             String(
-                form.get('team') || ''
+                form.get(
+                    'team'
+                ) || ''
             ).trim(),
 
         place:
             String(
-                form.get('place') || ''
+                form.get(
+                    'place'
+                ) || ''
             ).trim(),
 
         participantCount:
             participantCount
+
     };
 
 
@@ -3388,25 +3530,28 @@ async function submitTeacherResult(submitEvent) {
 
 
     /* =====================================================
-       DISABLE SUBMIT BUTTON
+       DISABLE BUTTON
        ===================================================== */
 
     const submitButton =
-        submitEvent.currentTarget.querySelector(
+        currentForm.querySelector(
             'button[type="submit"]'
         );
 
+
     if (submitButton) {
 
-        submitButton.disabled = true;
+        submitButton.disabled =
+            true;
 
         submitButton.textContent =
             'Publishing...';
+
     }
 
 
     /* =====================================================
-       SAVE RESULT TO SUPABASE
+       SAVE
        ===================================================== */
 
     try {
@@ -3417,39 +3562,23 @@ async function submitTeacherResult(submitEvent) {
         );
 
 
-        /* ---------------------------------------------
-           CHECK SUPABASE LIBRARY
-        --------------------------------------------- */
-
-        if (!window.supabase) {
-
-            throw new Error(
-                'Supabase library was not loaded. Check the Supabase CDN script in your HTML.'
-            );
-        }
-
-
-        /* ---------------------------------------------
-           CHECK SUPABASE CLIENT
-        --------------------------------------------- */
-
         if (
-            typeof supabaseClient === 'undefined' ||
+            typeof supabaseClient ===
+                'undefined' ||
             !supabaseClient
         ) {
 
             throw new Error(
                 'Supabase client was not created. Check supabase.js and make sure it loads before app.js.'
             );
+
         }
 
 
-        /* ---------------------------------------------
-           SAVE
-        --------------------------------------------- */
-
         const savedResult =
-            await saveResult(item);
+            await saveResult(
+                item
+            );
 
 
         console.log(
@@ -3476,11 +3605,12 @@ async function submitTeacherResult(submitEvent) {
             message.classList.add(
                 'success'
             );
+
         }
 
 
         /* =================================================
-           REFRESH WEBSITE DATA
+           REFRESH LIVE DATA
            ================================================= */
 
         await loadResults();
@@ -3497,9 +3627,6 @@ async function submitTeacherResult(submitEvent) {
            RESET FORM
            ================================================= */
 
-        const currentForm =
-            submitEvent.currentTarget;
-
         currentForm.reset();
 
 
@@ -3507,6 +3634,7 @@ async function submitTeacherResult(submitEvent) {
             currentForm.querySelector(
                 '[name="team"]'
             );
+
 
         if (team) {
             team.value = '';
@@ -3518,6 +3646,7 @@ async function submitTeacherResult(submitEvent) {
                 '[name="place"]'
             );
 
+
         if (place) {
             place.value = '';
         }
@@ -3528,15 +3657,21 @@ async function submitTeacherResult(submitEvent) {
                 '[name="participantCount"]'
             );
 
+
         if (participantInput) {
             participantInput.value = '';
         }
 
 
+        /* =================================================
+           FOCUS NAME
+           ================================================= */
+
         const nameInput =
             currentForm.querySelector(
                 '[name="name"]'
             );
+
 
         if (nameInput) {
             nameInput.focus();
@@ -3545,12 +3680,8 @@ async function submitTeacherResult(submitEvent) {
 
     } catch (error) {
 
-        /* =================================================
-           DETAILED ERROR HANDLING
-           ================================================= */
-
         console.error(
-            'SUPABASE SAVE ERROR:',
+            'Could not publish result:',
             error
         );
 
@@ -3571,21 +3702,21 @@ async function submitTeacherResult(submitEvent) {
         const errorCode =
             error &&
             error.code
-                ? `\n\nCode: ${error.code}`
+                ? ` | Code: ${error.code}`
                 : '';
 
 
         const errorDetails =
             error &&
             error.details
-                ? `\n\nDetails: ${error.details}`
+                ? ` | Details: ${error.details}`
                 : '';
 
 
         const errorHint =
             error &&
             error.hint
-                ? `\n\nHint: ${error.hint}`
+                ? ` | Hint: ${error.hint}`
                 : '';
 
 
@@ -3596,10 +3727,6 @@ async function submitTeacherResult(submitEvent) {
             errorHint;
 
 
-        /* ---------------------------------------------
-           SHOW ERROR ON PAGE
-        --------------------------------------------- */
-
         if (message) {
 
             message.textContent =
@@ -3608,18 +3735,14 @@ async function submitTeacherResult(submitEvent) {
             message.classList.remove(
                 'success'
             );
+
         }
 
-
-        /* ---------------------------------------------
-           SHOW ERROR IN ALERT
-        --------------------------------------------- */
 
         alert(
             'THE RESULT COULD NOT BE SAVED.\n\n' +
             fullError
         );
-
 
     } finally {
 
@@ -3634,11 +3757,13 @@ async function submitTeacherResult(submitEvent) {
 
             submitButton.textContent =
                 'Publish Result →';
+
         }
 
     }
 
 }
+
 
 /* =========================================================
    MANAGE / PUBLISHED RESULTS
@@ -3691,9 +3816,7 @@ function renderManageResults() {
 
         `;
 
-
         return;
-
     }
 
 
@@ -3803,7 +3926,8 @@ function renderManageResults() {
                             <strong
                                 class="teacher-manage-points"
                             >
-                                ${resultPoints} PTS
+                                ${resultPoints}
+                                PTS
                             </strong>
 
 
@@ -3842,7 +3966,8 @@ function renderManageResults() {
                         const item =
                             results().find(
                                 result =>
-                                    result.id === id
+                                    result.id ===
+                                    id
                             );
 
 
@@ -3900,8 +4025,14 @@ function renderManageResults() {
                                 'Delete';
 
 
+                            const errorMessage =
+                                error?.message ||
+                                String(error);
+
+
                             alert(
-                                'The result could not be deleted from Supabase.'
+                                'THE RESULT COULD NOT BE DELETED.\n\n' +
+                                errorMessage
                             );
 
                         }
@@ -4001,7 +4132,6 @@ function setupTeacherAuth() {
                 input.value =
                     '';
 
-
                 input.focus();
 
             }
@@ -4097,12 +4227,11 @@ function setupSpotlight() {
     }
 
 
-    const tabs =
-        [
-            ...document.querySelectorAll(
-                '.spotlight-tab'
-            )
-        ];
+    const tabs = [
+        ...document.querySelectorAll(
+            '.spotlight-tab'
+        )
+    ];
 
 
     function show(key) {
@@ -4361,7 +4490,7 @@ function setupAboutPage() {
 
 
 /* =========================================================
-   GLOBAL KEYBOARD CONTROLS
+   KEYBOARD CONTROLS
    ========================================================= */
 
 function setupKeyboardControls() {
@@ -4432,14 +4561,14 @@ document.addEventListener(
 
 
         /* =================================================
-           LOAD LIVE RESULTS
+           LOAD SUPABASE RESULTS
            ================================================= */
 
         await loadResults();
 
 
         /* =================================================
-           RENDER LIVE RESULTS
+           PUBLIC RESULT DISPLAY
            ================================================= */
 
         renderPublicResults();
@@ -4448,14 +4577,14 @@ document.addEventListener(
 
 
         /* =================================================
-           TEACHER AUTHENTICATION
+           TEACHER LOGIN
            ================================================= */
 
         setupTeacherAuth();
 
 
         /* =================================================
-           REALTIME DATABASE SYNC
+           REALTIME DATABASE
            ================================================= */
 
         setupRealtimeResults();
