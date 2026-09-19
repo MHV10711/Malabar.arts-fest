@@ -911,62 +911,120 @@ async function loadResults() {
 
 async function saveResult(item) {
 
-    const result =
-        normaliseResult(item);
+    try {
+
+        if (!window.supabase) {
+            throw new Error(
+                "Supabase library was not loaded."
+            );
+        }
+
+        if (!supabaseClient) {
+            throw new Error(
+                "Supabase client was not created."
+            );
+        }
 
 
-    const databaseRow = {
-
-        id:
-            result.id,
-
-        name:
-            result.name,
-
-        student_class:
-            result.studentClass,
-
-        section:
-            result.section,
-
-        activity_type:
-            result.activityType,
-
-        program_category:
-            result.programCategory,
-
-        event:
-            result.event,
-
-        team:
-            result.team,
-
-        place:
-            result.place,
-
-        participant_count:
-            result.participantCount
-
-    };
+        const result =
+            normaliseResult(item);
 
 
-    const {
-        data,
-        error
-    } =
-        await supabaseClient
-            .from('results')
-            .insert([
-                databaseRow
-            ])
-            .select()
-            .single();
+        const databaseRow = {
+
+            id:
+                result.id,
+
+            name:
+                result.name,
+
+            student_class:
+                result.studentClass,
+
+            section:
+                result.section,
+
+            activity_type:
+                result.activityType,
+
+            program_category:
+                result.programCategory,
+
+            event:
+                result.event,
+
+            team:
+                result.team,
+
+            place:
+                result.place,
+
+            participant_count:
+                result.participantCount
+
+        };
 
 
-    if (error) {
+        console.log(
+            "Sending result to Supabase:",
+            databaseRow
+        );
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from('results')
+                .insert([
+                    databaseRow
+                ])
+                .select()
+                .single();
+
+
+        if (error) {
+
+            console.error(
+                "SUPABASE INSERT ERROR:",
+                error
+            );
+
+            throw new Error(
+                "Supabase error: " +
+                error.message +
+                (error.code
+                    ? " | Code: " + error.code
+                    : "") +
+                (error.details
+                    ? " | Details: " + error.details
+                    : "") +
+                (error.hint
+                    ? " | Hint: " + error.hint
+                    : "")
+            );
+
+        }
+
+
+        const saved =
+            normaliseResult(data);
+
+
+        RESULTS_CACHE = [
+            saved,
+            ...RESULTS_CACHE
+        ];
+
+
+        return saved;
+
+
+    } catch (error) {
 
         console.error(
-            'Supabase insert error:',
+            "SAVE RESULT ERROR:",
             error
         );
 
@@ -974,21 +1032,7 @@ async function saveResult(item) {
 
     }
 
-
-    const saved =
-        normaliseResult(data);
-
-
-    RESULTS_CACHE = [
-        saved,
-        ...RESULTS_CACHE
-    ];
-
-
-    return saved;
-
 }
-
 
 /* =========================================================
    DELETE RESULT FROM SUPABASE
