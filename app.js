@@ -1,116 +1,87 @@
 /* =========================================================
    MIS ART FEST 2026
-   APPLICATION JAVASCRIPT
-   COMPLETE REBUILD
+   MAIN JAVASCRIPT
+   FRESH + SUPABASE FIXED VERSION
    ========================================================= */
 
 
 /* =========================================================
-   01. CONFIGURATION
+   CONFIGURATION
    ========================================================= */
 
-const CONFIG = Object.freeze({
+const CONFIG = {
 
-    teacherPassword: "malabar@5445",
+    TEACHER_PASSWORD: "malabar@5445",
 
-    sessionKey: "mis-art-fest-teacher-session",
+    STORAGE_KEY: "mis-art-fest-results-v1",
 
-    databaseTable: "results",
+    SESSION_KEY: "mis-art-fest-teacher-session",
 
-    individualPoints: {
-        1: 5,
-        2: 3,
-        3: 1
-    },
+    TABLE_NAME: "results",
 
-    groupPoints: {
+    GROUP_POINTS: {
         1: 10,
         2: 5,
         3: 3
+    },
+
+    INDIVIDUAL_POINTS: {
+        1: 5,
+        2: 3,
+        3: 1
     }
 
-});
+};
 
 
 /* =========================================================
-   02. HOUSE DATA
+   HOUSE INFORMATION
    ========================================================= */
 
-const HOUSES = Object.freeze({
+const HOUSES = {
 
     RED: {
-        key: "RED",
-        name: "Red House"
+        name: "Red House",
+        short: "RED"
     },
 
     GREEN: {
-        key: "GREEN",
-        name: "Green House"
+        name: "Green House",
+        short: "GREEN"
     },
 
     BLUE: {
-        key: "BLUE",
-        name: "Blue House"
+        name: "Blue House",
+        short: "BLUE"
     },
 
     YELLOW: {
-        key: "YELLOW",
-        name: "Yellow House"
+        name: "Yellow House",
+        short: "YELLOW"
     }
 
-});
+};
 
 
 /* =========================================================
-   03. SECTION DATA
+   SECTIONS
    ========================================================= */
 
-const SECTIONS = Object.freeze({
-
-    LP1: {
-        key: "LP1",
-        name: "LP 1",
-        fullName: "Lower Primary 1"
-    },
-
-    LP2: {
-        key: "LP2",
-        name: "LP 2",
-        fullName: "Lower Primary 2"
-    },
-
-    UP: {
-        key: "UP",
-        name: "UP",
-        fullName: "Upper Primary"
-    },
-
-    HS: {
-        key: "HS",
-        name: "HS",
-        fullName: "High School"
-    },
-
-    HSS: {
-        key: "HSS",
-        name: "HSS",
-        fullName: "Higher Secondary"
-    },
-
-    GENERAL: {
-        key: "GENERAL",
-        name: "General",
-        fullName: "General Category"
-    }
-
-});
+const SECTIONS = [
+    "LP1",
+    "LP2",
+    "UP",
+    "HS",
+    "HSS",
+    "GENERAL"
+];
 
 
 /* =========================================================
-   04. PROGRAM DATABASE
+   PROGRAM DATABASE
    ========================================================= */
 
-const PROGRAMS = Object.freeze({
+const PROGRAMS = {
 
     OFF_STAGE: {
 
@@ -270,7 +241,7 @@ const PROGRAMS = Object.freeze({
             {
                 name: "Group Song — Malayalam",
                 type: "group",
-                maxParticipants: 7
+                maxMembers: 7
             },
             {
                 name: "Light Music",
@@ -287,12 +258,12 @@ const PROGRAMS = Object.freeze({
             {
                 name: "Oppana",
                 type: "group",
-                maxParticipants: 10
+                maxMembers: 10
             },
             {
                 name: "Patriotic",
                 type: "group",
-                maxParticipants: 7
+                maxMembers: 7
             },
             {
                 name: "Poem Recitation — Arabic",
@@ -436,111 +407,48 @@ const PROGRAMS = Object.freeze({
                 name: "Nadanpattu",
                 type: "individual"
             }
-        ],
-
-        GENERAL: [
-            {
-                name: "Vattappattu",
-                type: "group",
-                maxParticipants: 10
-            },
-            {
-                name: "Mime",
-                type: "group",
-                maxParticipants: 7
-            },
-            {
-                name: "Oppana",
-                type: "group",
-                maxParticipants: 10
-            }
         ]
 
-    }
-
-});
+    },
 
 
-/* =========================================================
-   05. APPLICATION STATE
-   ========================================================= */
-
-const APP = {
-
-    results: [],
-
-    currentProgram: null,
-
-    realtimeChannel: null,
-
-    initialised: false
+    GENERAL: [
+        {
+            name: "Vattappattu",
+            type: "group",
+            maxMembers: 10
+        },
+        {
+            name: "Mime",
+            type: "group",
+            maxMembers: 7
+        },
+        {
+            name: "Oppana",
+            type: "group",
+            maxMembers: 10
+        }
+    ]
 
 };
 
 
 /* =========================================================
-   06. DOM HELPERS
+   HELPER FUNCTIONS
    ========================================================= */
 
 function byId(id) {
-
     return document.getElementById(id);
-
 }
 
 
-function firstExisting(...ids) {
+function clean(value) {
 
-    for (const id of ids) {
-
-        const element = byId(id);
-
-        if (element) {
-            return element;
-        }
-
+    if (value === null || value === undefined) {
+        return "";
     }
 
-    return null;
-
-}
-
-
-function all(selector) {
-
-    return Array.from(
-        document.querySelectorAll(selector)
-    );
-
-}
-
-
-/* =========================================================
-   07. GENERAL HELPERS
-   ========================================================= */
-
-function escapeHtml(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-function createId() {
-
-    return (
-        "result-" +
-        Date.now() +
-        "-" +
-        Math.random()
-            .toString(36)
-            .slice(2, 10)
-    );
+    return String(value).trim();
 
 }
 
@@ -556,799 +464,44 @@ function toNumber(value, fallback = 0) {
 }
 
 
-function clean(value) {
-
-    return String(value ?? "").trim();
-
-}
-
-
-function getPlace(place) {
-
-    const number =
-        toNumber(place);
-
-    return [1, 2, 3].includes(number)
-        ? number
-        : null;
-
-}
-
-
-function getMedal(place) {
-
-    switch (getPlace(place)) {
-
-        case 1:
-            return "🥇";
-
-        case 2:
-            return "🥈";
-
-        case 3:
-            return "🥉";
-
-        default:
-            return "";
-
-    }
-
-}
-
-
-function getStageName(category) {
-
-    if (
-        category === "OFF_STAGE"
-    ) {
-
-        return "Off Stage";
-
-    }
-
-    if (
-        category === "ON_STAGE"
-    ) {
-
-        return "On Stage";
-
-    }
-
-    return category || "";
-
-}
-
-
-function getSectionName(section) {
+function createId() {
 
     return (
-        SECTIONS[section]?.name ||
-        section ||
-        ""
+        "result-" +
+        Date.now() +
+        "-" +
+        Math.random()
+            .toString(36)
+            .substring(2, 10)
     );
 
 }
 
 
-function getSectionFullName(section) {
+function escapeHtml(value) {
 
-    return (
-        SECTIONS[section]?.fullName ||
-        section ||
-        ""
-    );
-
-}
-
-
-function getHouseName(house) {
-
-    const key =
-        clean(house).toUpperCase();
-
-    return (
-        HOUSES[key]?.name ||
-        clean(house) ||
-        "No House"
-    );
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
 
 /* =========================================================
-   08. SUPABASE AVAILABILITY
+   RESULT NORMALISATION
    ========================================================= */
 
-function supabaseIsReady() {
+/*
+   IMPORTANT:
 
-    return (
-        typeof window !== "undefined" &&
-        typeof window.supabase !== "undefined" &&
-        typeof supabaseClient !== "undefined" &&
-        supabaseClient !== null
-    );
+   This function uses ONLY the columns currently
+   present in your Supabase results table.
 
-}
-
-
-/* =========================================================
-   09. TEACHER AUTHENTICATION
-   ========================================================= */
-
-function isTeacherLoggedIn() {
-
-    return (
-        sessionStorage.getItem(
-            CONFIG.sessionKey
-        ) === "true"
-    );
-
-}
-
-
-function loginTeacher(password) {
-
-    const entered =
-        clean(password);
-
-    if (
-        entered ===
-        CONFIG.teacherPassword
-    ) {
-
-        sessionStorage.setItem(
-            CONFIG.sessionKey,
-            "true"
-        );
-
-        return true;
-
-    }
-
-    return false;
-
-}
-
-
-function logoutTeacher() {
-
-    sessionStorage.removeItem(
-        CONFIG.sessionKey
-    );
-
-    window.location.reload();
-
-}
-
-
-/* =========================================================
-   10. TEACHER LOGIN FORM
-   ========================================================= */
-
-function setupTeacherLogin() {
-
-    const form =
-        firstExisting(
-            "teacher-login-form",
-            "login-form"
-        );
-
-    if (!form) {
-        return;
-    }
-
-    if (
-        form.dataset
-            .loginInitialised === "true"
-    ) {
-        return;
-    }
-
-    form.dataset.loginInitialised =
-        "true";
-
-    form.addEventListener(
-        "submit",
-        function(event) {
-
-            event.preventDefault();
-
-            const input =
-                form.querySelector(
-                    'input[name="password"]'
-                ) ||
-                form.querySelector(
-                    "#teacher-password"
-                ) ||
-                form.querySelector(
-                    "#password"
-                ) ||
-                form.querySelector(
-                    'input[type="password"]'
-                );
-
-            if (!input) {
-
-                alert(
-                    "Password field was not found.\n\n" +
-                    'Your password input should have name="password".'
-                );
-
-                return;
-
-            }
-
-            if (
-                loginTeacher(
-                    input.value
-                )
-            ) {
-
-                window.location.reload();
-
-                return;
-
-            }
-
-            alert(
-                "Incorrect teacher password."
-            );
-
-            input.value = "";
-
-            input.focus();
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   11. TEACHER LOGOUT
-   ========================================================= */
-
-function setupTeacherLogout() {
-
-    const button =
-        firstExisting(
-            "teacher-logout",
-            "logout-teacher",
-            "logout-button"
-        );
-
-    if (!button) {
-        return;
-    }
-
-    if (
-        button.dataset
-            .logoutInitialised === "true"
-    ) {
-        return;
-    }
-
-    button.dataset.logoutInitialised =
-        "true";
-
-    button.addEventListener(
-        "click",
-        function(event) {
-
-            event.preventDefault();
-
-            logoutTeacher();
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   12. TEACHER VISIBILITY
-   ========================================================= */
-
-function updateTeacherVisibility() {
-
-    const loginArea =
-        firstExisting(
-            "teacher-login",
-            "teacher-login-section",
-            "login-section"
-        );
-
-    const dashboard =
-        firstExisting(
-            "teacher-dashboard",
-            "teacher-panel",
-            "teacher-content"
-        );
-
-    if (
-        !loginArea &&
-        !dashboard
-    ) {
-        return;
-    }
-
-    const loggedIn =
-        isTeacherLoggedIn();
-
-    if (loginArea) {
-
-        loginArea.hidden =
-            loggedIn;
-
-    }
-
-    if (dashboard) {
-
-        dashboard.hidden =
-            !loggedIn;
-
-    }
-
-}
-
-
-/* =========================================================
-   13. PROGRAM LOOKUP
-   ========================================================= */
-
-function getPrograms(
-    category,
-    section
-) {
-
-    return (
-        PROGRAMS[category]?.[section] ||
-        []
-    );
-
-}
-
-
-function findProgram(
-    category,
-    section,
-    programName
-) {
-
-    return getPrograms(
-        category,
-        section
-    ).find(
-        program =>
-            program.name ===
-            programName
-    ) || null;
-
-}
-
-
-/* =========================================================
-   14. PROGRAM SELECTOR ELEMENTS
-   ========================================================= */
-
-function getTeacherCategorySelect() {
-
-    return firstExisting(
-        "teacher-program-category",
-        "program-category",
-        "activity-category"
-    );
-
-}
-
-
-function getTeacherSectionSelect() {
-
-    return firstExisting(
-        "teacher-section",
-        "result-section",
-        "section"
-    );
-
-}
-
-
-function getTeacherProgramSelect() {
-
-    return firstExisting(
-        "teacher-program",
-        "program",
-        "event"
-    );
-
-}
-
-
-function getTeacherActivityTypeInput() {
-
-    return firstExisting(
-        "teacher-activity-type",
-        "activity-type"
-    );
-
-}
-
-
-function getParticipantCountInput() {
-
-    return firstExisting(
-        "participant-count",
-        "teacher-participant-count"
-    );
-
-}
-
-
-/* =========================================================
-   15. POPULATE PROGRAM SELECT
-   ========================================================= */
-
-function populateTeacherPrograms() {
-
-    const categorySelect =
-        getTeacherCategorySelect();
-
-    const sectionSelect =
-        getTeacherSectionSelect();
-
-    const programSelect =
-        getTeacherProgramSelect();
-
-    if (
-        !categorySelect ||
-        !sectionSelect ||
-        !programSelect
-    ) {
-        return;
-    }
-
-    const category =
-        categorySelect.value;
-
-    const section =
-        sectionSelect.value;
-
-    programSelect.innerHTML = "";
-
-    const placeholder =
-        document.createElement(
-            "option"
-        );
-
-    placeholder.value = "";
-
-    placeholder.textContent =
-        category && section
-            ? "Select Program"
-            : "Select category and section first";
-
-    programSelect.appendChild(
-        placeholder
-    );
-
-    const programs =
-        getPrograms(
-            category,
-            section
-        );
-
-    programs.forEach(
-        program => {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-            option.value =
-                program.name;
-
-            option.textContent =
-                program.name;
-
-            option.dataset.type =
-                program.type;
-
-            if (
-                program.maxParticipants
-            ) {
-
-                option.dataset.maxParticipants =
-                    String(
-                        program.maxParticipants
-                    );
-
-            }
-
-            programSelect.appendChild(
-                option
-            );
-
-        }
-    );
-
-    APP.currentProgram = null;
-
-    updateProgramDetails();
-
-}
-
-
-/* =========================================================
-   16. UPDATE PROGRAM DETAILS
-   ========================================================= */
-
-function updateProgramDetails() {
-
-    const categorySelect =
-        getTeacherCategorySelect();
-
-    const sectionSelect =
-        getTeacherSectionSelect();
-
-    const programSelect =
-        getTeacherProgramSelect();
-
-    if (
-        !categorySelect ||
-        !sectionSelect ||
-        !programSelect
-    ) {
-        return;
-    }
-
-    const category =
-        categorySelect.value;
-
-    const section =
-        sectionSelect.value;
-
-    const programName =
-        programSelect.value;
-
-    const program =
-        findProgram(
-            category,
-            section,
-            programName
-        );
-
-    APP.currentProgram =
-        program
-            ? {
-                ...program,
-                category,
-                section
-            }
-            : null;
-
-    const activityType =
-        getTeacherActivityTypeInput();
-
-    if (activityType) {
-
-        activityType.value =
-            APP.currentProgram?.type ||
-            "individual";
-
-    }
-
-    updateParticipantInput();
-
-    updateProgramFormVisibility();
-
-}
-
-
-/* =========================================================
-   17. PARTICIPANT INPUT
-   ========================================================= */
-
-function updateParticipantInput() {
-
-    const input =
-        getParticipantCountInput();
-
-    if (!input) {
-        return;
-    }
-
-    const isGroup =
-        APP.currentProgram?.type ===
-        "group";
-
-    if (isGroup) {
-
-        input.disabled = false;
-
-        input.min = "1";
-
-        if (
-            APP.currentProgram
-                ?.maxParticipants
-        ) {
-
-            input.max =
-                String(
-                    APP.currentProgram
-                        .maxParticipants
-                );
-
-        }
-
-        if (
-            !input.value ||
-            input.value === "1"
-        ) {
-
-            input.value = "1";
-
-        }
-
-    }
-    else {
-
-        input.disabled = true;
-
-        input.value = "1";
-
-        input.removeAttribute(
-            "max"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   18. PROGRAM FORM VISIBILITY
-   ========================================================= */
-
-function updateProgramFormVisibility() {
-
-    const form =
-        byId(
-            "teacher-result-form"
-        );
-
-    if (!form) {
-        return;
-    }
-
-    /*
-       The form itself remains visible.
-       We only update optional program
-       information instead of hiding the
-       entire form.
-    */
-
-    const info =
-        firstExisting(
-            "teacher-program-info",
-            "program-info"
-        );
-
-    if (!info) {
-        return;
-    }
-
-    if (!APP.currentProgram) {
-
-        info.textContent = "";
-
-        return;
-
-    }
-
-    let text =
-        APP.currentProgram.type ===
-        "group"
-            ? "Group Program"
-            : "Individual Program";
-
-    if (
-        APP.currentProgram
-            .maxParticipants
-    ) {
-
-        text +=
-            ` • Maximum ${APP.currentProgram.maxParticipants} participants`;
-
-    }
-
-    info.textContent =
-        text;
-
-}
-
-
-/* =========================================================
-   19. TEACHER PROGRAM SETUP
-   ========================================================= */
-
-function setupTeacherProgramSelection() {
-
-    const categorySelect =
-        getTeacherCategorySelect();
-
-    const sectionSelect =
-        getTeacherSectionSelect();
-
-    const programSelect =
-        getTeacherProgramSelect();
-
-    if (
-        categorySelect &&
-        categorySelect.dataset
-            .programInitialised !== "true"
-    ) {
-
-        categorySelect.dataset
-            .programInitialised =
-            "true";
-
-        categorySelect.addEventListener(
-            "change",
-            populateTeacherPrograms
-        );
-
-    }
-
-    if (
-        sectionSelect &&
-        sectionSelect.dataset
-            .programInitialised !== "true"
-    ) {
-
-        sectionSelect.dataset
-            .programInitialised =
-            "true";
-
-        sectionSelect.addEventListener(
-            "change",
-            populateTeacherPrograms
-        );
-
-    }
-
-    if (
-        programSelect &&
-        programSelect.dataset
-            .programInitialised !== "true"
-    ) {
-
-        programSelect.dataset
-            .programInitialised =
-            "true";
-
-        programSelect.addEventListener(
-            "change",
-            updateProgramDetails
-        );
-
-    }
-
-    if (
-        categorySelect &&
-        sectionSelect
-    ) {
-
-        populateTeacherPrograms();
-
-    }
-
-}
-
-
-/* =========================================================
-   20. RESULT NORMALISATION
-   ========================================================= */
+   There is NO "program" field here.
+*/
 
 function normaliseResult(row) {
 
@@ -1363,38 +516,24 @@ function normaliseResult(row) {
             createId(),
 
         name:
-            clean(
-                row.name ||
-                row.student_name
-            ),
+            clean(row.name),
 
         studentClass:
-            clean(
-                row.student_class ||
-                row.studentClass ||
-                row.class
-            ),
+            clean(row.student_class),
 
         section:
             clean(row.section),
 
         activityType:
-            clean(
-                row.activity_type ||
-                row.activityType
-            ) || "individual",
+            clean(row.activity_type) ||
+            "individual",
 
         programCategory:
-            clean(
-                row.program_category ||
-                row.programCategory
-            ) || "OFF_STAGE",
+            clean(row.program_category) ||
+            "OFF_STAGE",
 
         event:
-            clean(
-                row.event ||
-                row.program
-            ),
+            clean(row.event),
 
         team:
             clean(row.team),
@@ -1407,14 +546,12 @@ function normaliseResult(row) {
 
         participantCount:
             toNumber(
-                row.participant_count ||
-                row.participantCount,
+                row.participant_count,
                 1
             ),
 
         createdAt:
             row.created_at ||
-            row.createdAt ||
             new Date().toISOString()
 
     };
@@ -1423,80 +560,889 @@ function normaliseResult(row) {
 
 
 /* =========================================================
-   21. LOAD RESULTS FROM SUPABASE
+   LOCAL STORAGE
    ========================================================= */
 
-async function loadResults() {
+function getLocalResults() {
 
-    if (!supabaseIsReady()) {
+    try {
 
-        throw new Error(
-            "Supabase is not connected. Check supabase.js and the Supabase script."
-        );
-
-    }
-
-    const response =
-        await supabaseClient
-            .from(
-                CONFIG.databaseTable
-            )
-            .select("*")
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
+        const raw =
+            localStorage.getItem(
+                CONFIG.STORAGE_KEY
             );
 
-    if (response.error) {
+        if (!raw) {
+            return [];
+        }
 
-        throw response.error;
+        const parsed =
+            JSON.parse(raw);
+
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed
+            .map(normaliseResult)
+            .filter(Boolean);
+
+    } catch (error) {
+
+        console.error(error);
+
+        return [];
 
     }
 
-    APP.results =
-        Array.isArray(
-            response.data
-        )
-            ? response.data
-                .map(
-                    normaliseResult
-                )
-                .filter(Boolean)
-            : [];
+}
 
-    updateConnectionStatus(
-        "Live"
-    );
 
-    return APP.results;
+function saveLocalResults(results) {
+
+    try {
+
+        localStorage.setItem(
+            CONFIG.STORAGE_KEY,
+            JSON.stringify(results)
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
 
 }
 
 
 /* =========================================================
-   22. SAVE RESULT
+   TEACHER SESSION
    ========================================================= */
 
-async function saveResult(result) {
+function isTeacherLoggedIn() {
 
-    if (!supabaseIsReady()) {
+    return (
+        sessionStorage.getItem(
+            CONFIG.SESSION_KEY
+        ) === "true"
+    );
 
-        throw new Error(
-            "Supabase is not connected."
+}
+
+
+function setTeacherLoggedIn(value) {
+
+    if (value) {
+
+        sessionStorage.setItem(
+            CONFIG.SESSION_KEY,
+            "true"
+        );
+
+    } else {
+
+        sessionStorage.removeItem(
+            CONFIG.SESSION_KEY
         );
 
     }
 
-    const item =
-        normaliseResult(result);
+}
+
+
+/* =========================================================
+   TEACHER LOGIN
+   ========================================================= */
+
+function setupTeacherLogin() {
+
+    const form =
+        byId("teacher-login-form");
+
+    if (!form) {
+        return;
+    }
+
+    if (isTeacherLoggedIn()) {
+
+        const loginSection =
+            byId("teacher-login");
+
+        const portal =
+            byId("teacher-portal");
+
+        if (loginSection) {
+            loginSection.style.display = "none";
+        }
+
+        if (portal) {
+            portal.style.display = "";
+        }
+
+    }
+
+    form.addEventListener(
+        "submit",
+        function (event) {
+
+            event.preventDefault();
+
+            const passwordInput =
+                form.querySelector(
+                    '[name="password"]'
+                ) ||
+                byId("teacher-password") ||
+                form.querySelector(
+                    'input[type="password"]'
+                );
+
+            if (!passwordInput) {
+
+                alert(
+                    "Teacher password field was not found."
+                );
+
+                return;
+
+            }
+
+            const password =
+                clean(passwordInput.value);
+
+            if (
+                password !==
+                CONFIG.TEACHER_PASSWORD
+            ) {
+
+                alert(
+                    "Incorrect teacher password."
+                );
+
+                passwordInput.focus();
+
+                return;
+
+            }
+
+            setTeacherLoggedIn(true);
+
+            form.reset();
+
+            const loginSection =
+                byId("teacher-login");
+
+            const portal =
+                byId("teacher-portal");
+
+            if (loginSection) {
+                loginSection.style.display =
+                    "none";
+            }
+
+            if (portal) {
+                portal.style.display = "";
+            }
+
+            setupTeacherResultForm();
+
+            loadResults();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   TEACHER LOGOUT
+   ========================================================= */
+
+function setupTeacherLogout() {
+
+    const buttons =
+        document.querySelectorAll(
+            "[data-teacher-logout]"
+        );
+
+    buttons.forEach(
+        function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    setTeacherLoggedIn(false);
+
+                    window.location.reload();
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   PROGRAM HELPERS
+   ========================================================= */
+
+function getPrograms(
+    category,
+    section
+) {
+
+    category =
+        clean(category)
+            .toUpperCase();
+
+    section =
+        clean(section)
+            .toUpperCase();
+
+    if (
+        category ===
+        "GENERAL"
+    ) {
+
+        return PROGRAMS.GENERAL || [];
+
+    }
+
+    if (
+        PROGRAMS[category] &&
+        PROGRAMS[category][section]
+    ) {
+
+        return PROGRAMS[category][section];
+
+    }
+
+    return [];
+
+}
+
+
+function findProgram(
+    category,
+    section,
+    eventName
+) {
+
+    const programs =
+        getPrograms(
+            category,
+            section
+        );
+
+    return (
+        programs.find(
+            function (program) {
+
+                return (
+                    program.name ===
+                    eventName
+                );
+
+            }
+        ) ||
+        null
+    );
+
+}
+
+
+/* =========================================================
+   POPULATE SELECT
+   ========================================================= */
+
+function populateSelect(
+    select,
+    options,
+    placeholder = "Select"
+) {
+
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = "";
+
+    const first =
+        document.createElement("option");
+
+    first.value = "";
+    first.textContent = placeholder;
+
+    select.appendChild(first);
+
+    options.forEach(
+        function (option) {
+
+            const item =
+                document.createElement("option");
+
+            if (
+                typeof option === "string"
+            ) {
+
+                item.value = option;
+                item.textContent = option;
+
+            } else {
+
+                item.value = option.name;
+                item.textContent = option.name;
+
+            }
+
+            select.appendChild(item);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   TEACHER RESULT FORM
+   ========================================================= */
+
+function setupTeacherResultForm() {
+
+    const form =
+        byId("teacher-result-form");
+
+    if (!form) {
+        return;
+    }
+
+    if (
+        form.dataset.ready ===
+        "true"
+    ) {
+
+        updateTeacherPrograms();
+
+        return;
+
+    }
+
+    form.dataset.ready = "true";
+
+    const sectionSelect =
+        form.querySelector(
+            '[name="section"]'
+        ) ||
+        byId("result-section");
+
+    const categorySelect =
+        form.querySelector(
+            '[name="program_category"]'
+        ) ||
+        form.querySelector(
+            '[name="category"]'
+        ) ||
+        byId("result-category");
+
+    const eventSelect =
+        form.querySelector(
+            '[name="event"]'
+        ) ||
+        byId("result-event");
+
+    const activitySelect =
+        form.querySelector(
+            '[name="activity_type"]'
+        ) ||
+        byId("activity-type");
+
+    if (categorySelect) {
+
+        categorySelect.addEventListener(
+            "change",
+            updateTeacherPrograms
+        );
+
+    }
+
+    if (sectionSelect) {
+
+        sectionSelect.addEventListener(
+            "change",
+            updateTeacherPrograms
+        );
+
+    }
+
+    if (eventSelect) {
+
+        eventSelect.addEventListener(
+            "change",
+            updateActivityType
+        );
+
+    }
+
+    form.addEventListener(
+        "submit",
+        submitTeacherResult
+    );
+
+    updateTeacherPrograms();
+
+}
+
+
+function updateTeacherPrograms() {
+
+    const form =
+        byId("teacher-result-form");
+
+    if (!form) {
+        return;
+    }
+
+    const categorySelect =
+        form.querySelector(
+            '[name="program_category"]'
+        ) ||
+        form.querySelector(
+            '[name="category"]'
+        ) ||
+        byId("result-category");
+
+    const sectionSelect =
+        form.querySelector(
+            '[name="section"]'
+        ) ||
+        byId("result-section");
+
+    const eventSelect =
+        form.querySelector(
+            '[name="event"]'
+        ) ||
+        byId("result-event");
+
+    if (!eventSelect) {
+        return;
+    }
+
+    const category =
+        categorySelect
+            ? clean(categorySelect.value)
+            : "";
+
+    const section =
+        sectionSelect
+            ? clean(sectionSelect.value)
+            : "";
+
+    if (!category) {
+
+        eventSelect.innerHTML =
+            '<option value="">Select Program Category First</option>';
+
+        return;
+
+    }
+
+    const programs =
+        getPrograms(
+            category,
+            section
+        );
+
+    populateSelect(
+        eventSelect,
+        programs,
+        "Select Event"
+    );
+
+    updateActivityType();
+
+}
+
+
+function updateActivityType() {
+
+    const form =
+        byId("teacher-result-form");
+
+    if (!form) {
+        return;
+    }
+
+    const categorySelect =
+        form.querySelector(
+            '[name="program_category"]'
+        ) ||
+        form.querySelector(
+            '[name="category"]'
+        ) ||
+        byId("result-category");
+
+    const sectionSelect =
+        form.querySelector(
+            '[name="section"]'
+        ) ||
+        byId("result-section");
+
+    const eventSelect =
+        form.querySelector(
+            '[name="event"]'
+        ) ||
+        byId("result-event");
+
+    const activitySelect =
+        form.querySelector(
+            '[name="activity_type"]'
+        ) ||
+        byId("activity-type");
+
+    if (
+        !activitySelect ||
+        !eventSelect
+    ) {
+        return;
+    }
+
+    const category =
+        categorySelect
+            ? clean(categorySelect.value)
+            : "";
+
+    const section =
+        sectionSelect
+            ? clean(sectionSelect.value)
+            : "";
+
+    const eventName =
+        clean(eventSelect.value);
+
+    const program =
+        findProgram(
+            category,
+            section,
+            eventName
+        );
+
+    if (program) {
+
+        activitySelect.value =
+            program.type;
+
+    }
+
+}
+
+
+/* =========================================================
+   SUBMIT TEACHER RESULT
+   ========================================================= */
+
+async function submitTeacherResult(
+    event
+) {
+
+    event.preventDefault();
+
+    const form =
+        byId("teacher-result-form");
+
+    if (!form) {
+
+        alert(
+            "Result form was not found."
+        );
+
+        return;
+
+    }
+
+    const data =
+        new FormData(form);
+
+    const category =
+        clean(
+            data.get(
+                "program_category"
+            ) ||
+            data.get("category")
+        );
+
+    const section =
+        clean(
+            data.get("section")
+        );
+
+    const eventName =
+        clean(
+            data.get("event")
+        );
+
+    const name =
+        clean(
+            data.get("name") ||
+            data.get("student_name")
+        );
+
+    const studentClass =
+        clean(
+            data.get(
+                "student_class"
+            ) ||
+            data.get("class")
+        );
+
+    const team =
+        clean(
+            data.get("team") ||
+            data.get("house")
+        );
+
+    const place =
+        toNumber(
+            data.get("place"),
+            0
+        );
+
+    const participantCount =
+        Math.max(
+            1,
+            toNumber(
+                data.get(
+                    "participant_count"
+                ),
+                1
+            )
+        );
+
+    let activityType =
+        clean(
+            data.get(
+                "activity_type"
+            )
+        );
+
+    const program =
+        findProgram(
+            category,
+            section,
+            eventName
+        );
+
+    if (
+        !activityType &&
+        program
+    ) {
+
+        activityType =
+            program.type;
+
+    }
+
+    if (!name) {
+
+        alert(
+            "Please enter the student or group name."
+        );
+
+        return;
+
+    }
+
+    if (!category) {
+
+        alert(
+            "Please select the program category."
+        );
+
+        return;
+
+    }
+
+    if (!eventName) {
+
+        alert(
+            "Please select the event."
+        );
+
+        return;
+
+    }
+
+    if (
+        !["RED", "GREEN", "BLUE", "YELLOW"]
+            .includes(
+                team.toUpperCase()
+            )
+    ) {
+
+        alert(
+            "Please select a valid house."
+        );
+
+        return;
+
+    }
+
+    if (
+        ![1, 2, 3]
+            .includes(place)
+    ) {
+
+        alert(
+            "Place must be 1, 2, or 3."
+        );
+
+        return;
+
+    }
+
+    const result = {
+
+        id: createId(),
+
+        name: name,
+
+        studentClass:
+            studentClass,
+
+        section:
+            section,
+
+        activityType:
+            activityType ||
+            "individual",
+
+        programCategory:
+            category,
+
+        event:
+            eventName,
+
+        team:
+            team.toUpperCase(),
+
+        place:
+            place,
+
+        participantCount:
+            participantCount,
+
+        createdAt:
+            new Date().toISOString()
+
+    };
+
+    const submitButton =
+        form.querySelector(
+            'button[type="submit"]'
+        );
+
+    if (submitButton) {
+
+        submitButton.disabled =
+            true;
+
+        submitButton.dataset.originalText =
+            submitButton.textContent;
+
+        submitButton.textContent =
+            "Saving...";
+
+    }
+
+    try {
+
+        await saveResult(result);
+
+        alert(
+            "Result saved successfully."
+        );
+
+        form.reset();
+
+        updateTeacherPrograms();
+
+        await loadResults();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Could not save result.\n\n" +
+            error.message
+        );
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled =
+                false;
+
+            submitButton.textContent =
+                submitButton.dataset.originalText ||
+                "Save Result";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE RESULT TO SUPABASE
+   ========================================================= */
+
+/*
+   VERY IMPORTANT:
+
+   Your current Supabase table does NOT contain
+   a "program" column.
+
+   Therefore this object intentionally contains:
+
+   id
+   name
+   student_class
+   section
+   activity_type
+   program_category
+   event
+   team
+   place
+   participant_count
+
+   NOTHING ELSE.
+*/
+
+async function saveResult(item) {
+
+    if (
+        !window.supabase ||
+        !window.supabaseClient
+    ) {
+
+        throw new Error(
+            "Supabase is not connected. Check supabase.js and script order."
+        );
+
+    }
 
     const databaseRow = {
 
-        id: item.id,
+        id:
+            item.id,
 
-        name: item.name,
+        name:
+            item.name,
 
         student_class:
             item.studentClass,
@@ -1520,820 +1466,127 @@ async function saveResult(result) {
             item.place,
 
         participant_count:
-            item.participantCount,
-
-        /*
-           These two fields are retained
-           because your current database
-           has legacy NOT NULL columns.
-        */
-
-        student_name:
-            item.name,
-
-        program:
-            item.event
+            item.participantCount
 
     };
 
-    const response =
-        await supabaseClient
-            .from(
-                CONFIG.databaseTable
-            )
-            .insert(
-                [databaseRow]
-            )
+    /*
+       NO "program" FIELD.
+       NO "student_name" FIELD.
+    */
+
+    const {
+        data,
+        error
+    } =
+        await window.supabaseClient
+            .from(CONFIG.TABLE_NAME)
+            .insert(databaseRow)
             .select()
             .single();
 
-    if (response.error) {
+    if (error) {
 
-        throw response.error;
+        console.error(
+            "Supabase insert error:",
+            error
+        );
+
+        throw new Error(
+            "Supabase error: " +
+            error.message +
+            " | Code: " +
+            (error.code || "unknown")
+        );
 
     }
 
-    const saved =
-        normaliseResult(
-            response.data ||
-            databaseRow
-        );
-
-    /*
-       Don't blindly duplicate the row.
-    */
-
-    APP.results =
-        [
-            saved,
-            ...APP.results.filter(
-                existing =>
-                    existing.id !==
-                    saved.id
-            )
-        ];
-
-    return saved;
+    return normaliseResult(data);
 
 }
 
 
 /* =========================================================
-   23. DELETE RESULT
+   LOAD RESULTS FROM SUPABASE
+   ========================================================= */
+
+async function loadResults() {
+
+    try {
+
+        if (
+            !window.supabaseClient
+        ) {
+
+            const local =
+                getLocalResults();
+
+            renderEverything(local);
+
+            return local;
+
+        }
+
+        const {
+            data,
+            error
+        } =
+            await window.supabaseClient
+                .from(CONFIG.TABLE_NAME)
+                .select("*")
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+        if (error) {
+
+            console.error(
+                "Supabase load error:",
+                error
+            );
+
+            throw error;
+
+        }
+
+        const results =
+            (data || [])
+                .map(normaliseResult)
+                .filter(Boolean);
+
+        saveLocalResults(results);
+
+        renderEverything(results);
+
+        return results;
+
+    } catch (error) {
+
+        console.error(error);
+
+        const local =
+            getLocalResults();
+
+        renderEverything(local);
+
+        return local;
+
+    }
+
+}
+
+
+/* =========================================================
+   DELETE RESULT
    ========================================================= */
 
 async function deleteResult(id) {
 
-    if (!supabaseIsReady()) {
-
-        throw new Error(
-            "Supabase is not connected."
-        );
-
-    }
-
     if (!id) {
-
-        throw new Error(
-            "Result ID is missing."
-        );
-
-    }
-
-    const response =
-        await supabaseClient
-            .from(
-                CONFIG.databaseTable
-            )
-            .delete()
-            .eq(
-                "id",
-                id
-            );
-
-    if (response.error) {
-
-        throw response.error;
-
-    }
-
-    APP.results =
-        APP.results.filter(
-            result =>
-                result.id !== id
-        );
-
-}
-
-
-/* =========================================================
-   24. POINT CALCULATION
-   ========================================================= */
-
-function getResultPoints(result) {
-
-    const place =
-        getPlace(
-            result.place
-        );
-
-    if (!place) {
-        return 0;
-    }
-
-    const isGroup =
-        clean(
-            result.activityType
-        ).toLowerCase() ===
-        "group";
-
-    const pointTable =
-        isGroup
-            ? CONFIG.groupPoints
-            : CONFIG.individualPoints;
-
-    return (
-        pointTable[place] ||
-        0
-    );
-
-}
-
-
-/* =========================================================
-   25. HOUSE SCORES
-   ========================================================= */
-
-function calculateHouseScores(
-    source = APP.results
-) {
-
-    const scores = {
-
-        RED: 0,
-
-        GREEN: 0,
-
-        BLUE: 0,
-
-        YELLOW: 0
-
-    };
-
-    source.forEach(
-        result => {
-
-            const house =
-                clean(
-                    result.team
-                ).toUpperCase();
-
-            if (
-                Object.prototype
-                    .hasOwnProperty
-                    .call(
-                        scores,
-                        house
-                    )
-            ) {
-
-                scores[house] +=
-                    getResultPoints(
-                        result
-                    );
-
-            }
-
-        }
-    );
-
-    return scores;
-
-}
-
-
-function getSortedHouseScores() {
-
-    const scores =
-        calculateHouseScores();
-
-    return Object.entries(
-        scores
-    ).sort(
-        (
-            [, scoreA],
-            [, scoreB]
-        ) =>
-            scoreB - scoreA
-    );
-
-}
-
-
-/* =========================================================
-   26. FILTER SYSTEM
-   ========================================================= */
-
-function getFilterValue(name) {
-
-    const element =
-        document.querySelector(
-            `[data-result-filter="${name}"]`
-        );
-
-    return element
-        ? clean(element.value)
-        : "";
-
-}
-
-
-function filterResults(
-    source = APP.results
-) {
-
-    const section =
-        getFilterValue(
-            "section"
-        );
-
-    const category =
-        getFilterValue(
-            "category"
-        );
-
-    const event =
-        getFilterValue(
-            "event"
-        );
-
-    const team =
-        getFilterValue(
-            "team"
-        ).toUpperCase();
-
-    return source.filter(
-        result => {
-
-            if (
-                section &&
-                section !== "all" &&
-                result.section !== section
-            ) {
-
-                return false;
-
-            }
-
-            if (
-                category &&
-                category !== "all" &&
-                result.programCategory !==
-                    category
-            ) {
-
-                return false;
-
-            }
-
-            if (
-                event &&
-                event !== "all" &&
-                result.event !== event
-            ) {
-
-                return false;
-
-            }
-
-            if (
-                team &&
-                team !== "all" &&
-                clean(
-                    result.team
-                ).toUpperCase() !== team
-            ) {
-
-                return false;
-
-            }
-
-            return true;
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   27. POPULATE FILTERS
-   ========================================================= */
-
-function addFilterOption(
-    select,
-    value,
-    text
-) {
-
-    const option =
-        document.createElement(
-            "option"
-        );
-
-    option.value =
-        value;
-
-    option.textContent =
-        text;
-
-    select.appendChild(
-        option
-    );
-
-}
-
-
-function populateFilters() {
-
-    const sectionFilter =
-        document.querySelector(
-            '[data-result-filter="section"]'
-        );
-
-    if (sectionFilter) {
-
-        const oldValue =
-            sectionFilter.value;
-
-        sectionFilter.innerHTML = "";
-
-        addFilterOption(
-            sectionFilter,
-            "all",
-            "All Sections"
-        );
-
-        Object.keys(
-            SECTIONS
-        ).forEach(
-            section => {
-
-                addFilterOption(
-                    sectionFilter,
-                    section,
-                    getSectionFullName(
-                        section
-                    )
-                );
-
-            }
-        );
-
-        sectionFilter.value =
-            oldValue || "all";
-
-    }
-
-
-    const categoryFilter =
-        document.querySelector(
-            '[data-result-filter="category"]'
-        );
-
-    if (categoryFilter) {
-
-        const oldValue =
-            categoryFilter.value;
-
-        categoryFilter.innerHTML = "";
-
-        addFilterOption(
-            categoryFilter,
-            "all",
-            "All Categories"
-        );
-
-        addFilterOption(
-            categoryFilter,
-            "OFF_STAGE",
-            "Off Stage"
-        );
-
-        addFilterOption(
-            categoryFilter,
-            "ON_STAGE",
-            "On Stage"
-        );
-
-        categoryFilter.value =
-            oldValue || "all";
-
-    }
-
-
-    const eventFilter =
-        document.querySelector(
-            '[data-result-filter="event"]'
-        );
-
-    if (eventFilter) {
-
-        const oldValue =
-            eventFilter.value;
-
-        const events =
-            [
-                ...new Set(
-                    APP.results
-                        .map(
-                            result =>
-                                result.event
-                        )
-                        .filter(Boolean)
-                )
-            ].sort(
-                (a, b) =>
-                    a.localeCompare(
-                        b
-                    )
-            );
-
-        eventFilter.innerHTML = "";
-
-        addFilterOption(
-            eventFilter,
-            "all",
-            "All Programs"
-        );
-
-        events.forEach(
-            eventName => {
-
-                addFilterOption(
-                    eventFilter,
-                    eventName,
-                    eventName
-                );
-
-            }
-        );
-
-        eventFilter.value =
-            oldValue || "all";
-
-    }
-
-
-    const teamFilter =
-        document.querySelector(
-            '[data-result-filter="team"]'
-        );
-
-    if (teamFilter) {
-
-        const oldValue =
-            teamFilter.value;
-
-        teamFilter.innerHTML = "";
-
-        addFilterOption(
-            teamFilter,
-            "all",
-            "All Houses"
-        );
-
-        Object.values(
-            HOUSES
-        ).forEach(
-            house => {
-
-                addFilterOption(
-                    teamFilter,
-                    house.key,
-                    house.name
-                );
-
-            }
-        );
-
-        teamFilter.value =
-            oldValue || "all";
-
-    }
-
-}
-
-
-/* =========================================================
-   28. RESULT CARD
-   ========================================================= */
-
-function resultCardHtml(
-    result
-) {
-
-    const points =
-        getResultPoints(
-            result
-        );
-
-    const house =
-        clean(
-            result.team
-        ).toUpperCase();
-
-    const houseName =
-        getHouseName(
-            house
-        );
-
-    const medalIcon =
-        getMedal(
-            result.place
-        );
-
-    return `
-        <article class="result-card">
-
-            <div class="result-medal">
-                ${medalIcon}
-            </div>
-
-            <div class="result-information">
-
-                <h3>
-                    ${escapeHtml(
-                        result.name
-                    )}
-                </h3>
-
-                <p class="result-program">
-                    ${escapeHtml(
-                        result.event
-                    )}
-                </p>
-
-                <div class="result-meta">
-
-                    <span>
-                        ${escapeHtml(
-                            getSectionName(
-                                result.section
-                            )
-                        )}
-                    </span>
-
-                    <span>
-                        ${escapeHtml(
-                            result.studentClass
-                        )}
-                    </span>
-
-                    <span>
-                        ${escapeHtml(
-                            houseName
-                        )}
-                    </span>
-
-                </div>
-
-            </div>
-
-            <div class="result-points">
-
-                <strong>
-                    ${points}
-                </strong>
-
-                <span>
-                    points
-                </span>
-
-            </div>
-
-        </article>
-    `;
-
-}
-
-
-/* =========================================================
-   29. PUBLIC RESULTS RENDER
-   ========================================================= */
-
-function renderPublicResults() {
-
-    const container =
-        firstExisting(
-            "public-results",
-            "results-list",
-            "results-container",
-            "results-grid"
-        );
-
-    if (!container) {
         return;
-    }
-
-    const filtered =
-        filterResults();
-
-    if (!filtered.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-
-                <h3>
-                    No results found
-                </h3>
-
-                <p>
-                    Published results will appear here.
-                </p>
-
-            </div>
-        `;
-
-        return;
-
-    }
-
-    container.innerHTML =
-        filtered
-            .map(
-                resultCardHtml
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   30. TEACHER RESULTS RENDER
-   ========================================================= */
-
-function renderTeacherResults() {
-
-    const container =
-        firstExisting(
-            "teacher-results",
-            "teacher-results-list",
-            "manage-results",
-            "manage-results-list"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    if (!isTeacherLoggedIn()) {
-
-        container.innerHTML = "";
-
-        return;
-
-    }
-
-    if (!APP.results.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-
-                <h3>
-                    No results published
-                </h3>
-
-                <p>
-                    Results submitted through the teacher portal will appear here.
-                </p>
-
-            </div>
-        `;
-
-        return;
-
-    }
-
-    container.innerHTML =
-        APP.results
-            .map(
-                result => {
-
-                    const points =
-                        getResultPoints(
-                            result
-                        );
-
-                    return `
-                        <div class="teacher-result-item">
-
-                            <div class="teacher-result-main">
-
-                                <strong>
-                                    ${escapeHtml(
-                                        result.name
-                                    )}
-                                </strong>
-
-                                <span>
-                                    ${escapeHtml(
-                                        result.event
-                                    )}
-                                </span>
-
-                                <small>
-                                    ${escapeHtml(
-                                        getSectionName(
-                                            result.section
-                                        )
-                                    )}
-                                    ·
-                                    ${escapeHtml(
-                                        result.studentClass
-                                    )}
-                                    ·
-                                    ${escapeHtml(
-                                        getHouseName(
-                                            result.team
-                                        )
-                                    )}
-                                </small>
-
-                            </div>
-
-                            <div class="teacher-result-place">
-
-                                <strong>
-                                    ${getMedal(
-                                        result.place
-                                    )}
-                                    ${getPlace(
-                                        result.place
-                                    ) || ""}
-                                </strong>
-
-                                <span>
-                                    ${points} points
-                                </span>
-
-                            </div>
-
-                            <button
-                                type="button"
-                                class="delete-result"
-                                data-delete-result="${escapeHtml(result.id)}"
-                            >
-                                Delete
-                            </button>
-
-                        </div>
-                    `;
-
-                }
-            )
-            .join("");
-
-    container
-        .querySelectorAll(
-            "[data-delete-result]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    handleDeleteResult
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   31. DELETE RESULT HANDLER
-   ========================================================= */
-
-async function handleDeleteResult(
-    event
-) {
-
-    const button =
-        event.currentTarget;
-
-    const id =
-        button.dataset.deleteResult;
-
-    if (!id) {
-
-        alert(
-            "This result does not have a valid ID."
-        );
-
-        return;
-
     }
 
     const confirmed =
@@ -2345,45 +1598,37 @@ async function handleDeleteResult(
         return;
     }
 
-    const originalText =
-        button.textContent;
-
-    button.disabled = true;
-
-    button.textContent =
-        "Deleting...";
-
     try {
 
-        await deleteResult(
-            id
-        );
-
-        renderAll();
-
-    }
-    catch (error) {
-
-        console.error(
-            "Delete error:",
+        const {
             error
-        );
+        } =
+            await window.supabaseClient
+                .from(CONFIG.TABLE_NAME)
+                .delete()
+                .eq(
+                    "id",
+                    id
+                );
+
+        if (error) {
+            throw error;
+        }
 
         alert(
-            "The result could not be deleted.\n\n" +
-            (
-                error?.message ||
-                "Unknown error"
-            )
+            "Result deleted successfully."
         );
 
-    }
-    finally {
+        await loadResults();
 
-        button.disabled = false;
+    } catch (error) {
 
-        button.textContent =
-            originalText;
+        console.error(error);
+
+        alert(
+            "Could not delete result.\n\n" +
+            error.message
+        );
 
     }
 
@@ -2391,69 +1636,538 @@ async function handleDeleteResult(
 
 
 /* =========================================================
-   32. CHAMPIONSHIP TABLE
+   POINT CALCULATION
    ========================================================= */
 
-function renderChampionship() {
+function getPoints(
+    result
+) {
+
+    const place =
+        toNumber(
+            result.place,
+            0
+        );
+
+    if (
+        ![1, 2, 3]
+            .includes(place)
+    ) {
+
+        return 0;
+
+    }
+
+    if (
+        result.activityType
+            .toLowerCase() ===
+        "group"
+    ) {
+
+        return (
+            CONFIG.GROUP_POINTS[
+                place
+            ] || 0
+        );
+
+    }
+
+    return (
+        CONFIG.INDIVIDUAL_POINTS[
+            place
+        ] || 0
+    );
+
+}
+
+
+/* =========================================================
+   HOUSE TOTALS
+   ========================================================= */
+
+function calculateHouseTotals(
+    results
+) {
+
+    const totals = {
+
+        RED: 0,
+        GREEN: 0,
+        BLUE: 0,
+        YELLOW: 0
+
+    };
+
+    results.forEach(
+        function (result) {
+
+            const house =
+                clean(
+                    result.team
+                ).toUpperCase();
+
+            if (
+                Object.prototype
+                    .hasOwnProperty
+                    .call(
+                        totals,
+                        house
+                    )
+            ) {
+
+                totals[house] +=
+                    getPoints(result);
+
+            }
+
+        }
+    );
+
+    return totals;
+
+}
+
+
+/* =========================================================
+   CHAMPIONSHIP
+   ========================================================= */
+
+function renderChampionship(
+    results
+) {
+
+    const totals =
+        calculateHouseTotals(
+            results
+        );
+
+    const ordered =
+        Object.entries(totals)
+            .sort(
+                function (a, b) {
+                    return b[1] - a[1];
+                }
+            );
 
     const container =
-        firstExisting(
-            "championship",
-            "house-scores",
-            "championship-table",
-            "house-leaderboard"
-        );
+        byId("championship");
 
     if (!container) {
         return;
     }
 
-    const sorted =
-        getSortedHouseScores();
-
     container.innerHTML =
-        sorted
+        ordered
             .map(
-                (
+                function (
                     [house, points],
                     index
-                ) => {
-
-                    const houseInfo =
-                        HOUSES[house];
+                ) {
 
                     return `
-                        <div
-                            class="house-score-card"
-                            data-house="${house}"
-                        >
-
-                            <div class="house-position">
+                        <div class="house-rank">
+                            <span class="rank">
                                 ${index + 1}
-                            </div>
+                            </span>
 
-                            <div class="house-details">
+                            <span class="house">
+                                ${escapeHtml(
+                                    HOUSES[house]?.name ||
+                                    house
+                                )}
+                            </span>
+
+                            <strong>
+                                ${points}
+                            </strong>
+                        </div>
+                    `;
+
+                }
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   STATISTICS
+   ========================================================= */
+
+function renderStatistics(
+    results
+) {
+
+    const totalResults =
+        results.length;
+
+    const totalPoints =
+        results.reduce(
+            function (
+                total,
+                result
+            ) {
+
+                return (
+                    total +
+                    getPoints(result)
+                );
+
+            },
+            0
+        );
+
+    const firstPlaces =
+        results.filter(
+            function (result) {
+                return (
+                    result.place === 1
+                );
+            }
+        ).length;
+
+    const secondPlaces =
+        results.filter(
+            function (result) {
+                return (
+                    result.place === 2
+                );
+            }
+        ).length;
+
+    const thirdPlaces =
+        results.filter(
+            function (result) {
+                return (
+                    result.place === 3
+                );
+            }
+        ).length;
+
+
+    const mappings = {
+
+        "total-results":
+            totalResults,
+
+        "total-points":
+            totalPoints,
+
+        "first-places":
+            firstPlaces,
+
+        "second-places":
+            secondPlaces,
+
+        "third-places":
+            thirdPlaces
+
+    };
+
+
+    Object.entries(
+        mappings
+    ).forEach(
+        function (
+            [id, value]
+        ) {
+
+            const element =
+                byId(id);
+
+            if (element) {
+                element.textContent =
+                    value;
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   RESULT TABLE
+   ========================================================= */
+
+function renderResultsTable(
+    results
+) {
+
+    const tbody =
+        byId("results-body") ||
+        byId("results-table-body");
+
+    if (!tbody) {
+        return;
+    }
+
+    if (!results.length) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10">
+                    No results available.
+                </td>
+            </tr>
+        `;
+
+        return;
+
+    }
+
+    tbody.innerHTML =
+        results
+            .map(
+                function (result) {
+
+                    const points =
+                        getPoints(result);
+
+                    return `
+                        <tr>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.name
+                                )}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.studentClass
+                                )}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.section
+                                )}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.event
+                                )}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.activityType
+                                )}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(
+                                    result.team
+                                )}
+                            </td>
+
+                            <td>
+                                ${result.place}
+                            </td>
+
+                            <td>
+                                ${points}
+                            </td>
+
+                            <td>
+                                ${result.participantCount}
+                            </td>
+
+                            <td>
+                                ${
+                                    isTeacherLoggedIn()
+                                    ? `
+                                        <button
+                                            type="button"
+                                            class="delete-result"
+                                            data-result-id="${escapeHtml(
+                                                result.id
+                                            )}"
+                                        >
+                                            Delete
+                                        </button>
+                                    `
+                                    : ""
+                                }
+                            </td>
+
+                        </tr>
+                    `;
+
+                }
+            )
+            .join("");
+
+
+    tbody
+        .querySelectorAll(
+            ".delete-result"
+        )
+        .forEach(
+            function (button) {
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        deleteResult(
+                            button.dataset.resultId
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   PUBLIC RESULT CARDS
+   ========================================================= */
+
+function renderPublicResults(
+    results
+) {
+
+    const container =
+        byId("public-results") ||
+        byId("results-container");
+
+    if (!container) {
+        return;
+    }
+
+    if (!results.length) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                No results have been published yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+    container.innerHTML =
+        results
+            .map(
+                function (result) {
+
+                    return `
+                        <article class="result-card">
+
+                            <div class="result-card-header">
+
+                                <span>
+                                    ${escapeHtml(
+                                        result.event
+                                    )}
+                                </span>
 
                                 <strong>
+                                    ${result.place === 1
+                                        ? "1st"
+                                        : result.place === 2
+                                            ? "2nd"
+                                            : result.place === 3
+                                                ? "3rd"
+                                                : result.place
+                                    }
+                                </strong>
+
+                            </div>
+
+                            <h3>
+                                ${escapeHtml(
+                                    result.name
+                                )}
+                            </h3>
+
+                            <p>
+                                ${escapeHtml(
+                                    result.team
+                                )}
+                            </p>
+
+                            <small>
+                                ${escapeHtml(
+                                    result.section
+                                )}
+                                ·
+                                ${getPoints(result)}
+                                points
+                            </small>
+
+                        </article>
+                    `;
+
+                }
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   LATEST RESULTS
+   ========================================================= */
+
+function renderLatestResults(
+    results
+) {
+
+    const container =
+        byId("latest-results");
+
+    if (!container) {
+        return;
+    }
+
+    const latest =
+        results.slice(
+            0,
+            10
+        );
+
+    if (!latest.length) {
+
+        container.innerHTML =
+            "<p>No results yet.</p>";
+
+        return;
+
+    }
+
+    container.innerHTML =
+        latest
+            .map(
+                function (result) {
+
+                    return `
+                        <div class="latest-result">
+
+                            <div>
+                                <strong>
                                     ${escapeHtml(
-                                        houseInfo?.name ||
-                                        house
+                                        result.name
                                     )}
                                 </strong>
 
-                            </div>
-
-                            <div class="house-points">
-
-                                <strong>
-                                    ${points}
-                                </strong>
-
                                 <span>
-                                    points
+                                    ${escapeHtml(
+                                        result.event
+                                    )}
                                 </span>
-
                             </div>
+
+                            <strong>
+                                ${getPoints(result)}
+                            </strong>
 
                         </div>
                     `;
@@ -2466,1220 +2180,378 @@ function renderChampionship() {
 
 
 /* =========================================================
-   33. DASHBOARD STATISTICS
+   FILTERS
    ========================================================= */
 
-function renderStatistics() {
-
-    const totalResults =
-        APP.results.length;
-
-    const totalPoints =
-        APP.results.reduce(
-            (
-                total,
-                result
-            ) =>
-                total +
-                getResultPoints(
-                    result
-                ),
-            0
-        );
-
-    const totalPrograms =
-        new Set(
-            APP.results.map(
-                result =>
-                    result.event
-            )
-        ).size;
-
-
-    const totalStudents =
-        new Set(
-            APP.results.map(
-                result =>
-                    result.name
-            )
-        ).size;
-
-
-    const mappings = {
-
-        totalResults: totalResults,
-
-        dashboardTotalResults:
-            totalResults,
-
-        totalPoints: totalPoints,
-
-        dashboardTotalPoints:
-            totalPoints,
-
-        totalPrograms:
-            totalPrograms,
-
-        dashboardTotalPrograms:
-            totalPrograms,
-
-        totalStudents:
-            totalStudents
-
-    };
-
-
-    Object.entries(
-        mappings
-    ).forEach(
-        (
-            [id, value]
-        ) => {
-
-            const element =
-                byId(id);
-
-            if (element) {
-
-                element.textContent =
-                    String(value);
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   34. HOME / LATEST RESULTS
-   ========================================================= */
-
-function renderLatestResults() {
-
-    const container =
-        firstExisting(
-            "home-spotlight",
-            "spotlight-results",
-            "latest-results",
-            "featured-results"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    const latest =
-        APP.results.slice(
-            0,
-            6
-        );
-
-    if (!latest.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-
-                <h3>
-                    Results coming soon
-                </h3>
-
-                <p>
-                    MIS Art Fest 2026 results will appear here.
-                </p>
-
-            </div>
-        `;
-
-        return;
-
-    }
-
-    container.innerHTML =
-        latest
-            .map(
-                resultCardHtml
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   35. RESULT FORM SUBMISSION
-   ========================================================= */
-
-function getFormValue(
-    form,
-    names,
-    fallback = ""
+function setupFilters(
+    results
 ) {
 
-    for (const name of names) {
+    const houseFilter =
+        byId("filter-house");
 
-        const element =
-            form.querySelector(
-                `[name="${name}"]`
-            );
+    const sectionFilter =
+        byId("filter-section");
 
-        if (element) {
+    const eventFilter =
+        byId("filter-event");
 
-            return clean(
-                element.value
-            );
+
+    function applyFilters() {
+
+        let filtered =
+            [...results];
+
+
+        if (
+            houseFilter &&
+            houseFilter.value
+        ) {
+
+            filtered =
+                filtered.filter(
+                    function (result) {
+
+                        return (
+                            result.team ===
+                            houseFilter.value
+                        );
+
+                    }
+                );
 
         }
 
-    }
 
-    return fallback;
+        if (
+            sectionFilter &&
+            sectionFilter.value
+        ) {
 
-}
+            filtered =
+                filtered.filter(
+                    function (result) {
+
+                        return (
+                            result.section ===
+                            sectionFilter.value
+                        );
+
+                    }
+                );
+
+        }
 
 
-function setupTeacherResultForm() {
+        if (
+            eventFilter &&
+            eventFilter.value
+        ) {
 
-    const form =
-        byId(
-            "teacher-result-form"
+            filtered =
+                filtered.filter(
+                    function (result) {
+
+                        return (
+                            result.event ===
+                            eventFilter.value
+                        );
+
+                    }
+                );
+
+        }
+
+
+        renderResultsTable(
+            filtered
         );
 
-    if (!form) {
-        return;
     }
 
-    if (
-        form.dataset
-            .resultInitialised === "true"
-    ) {
-        return;
+
+    if (houseFilter) {
+
+        houseFilter.onchange =
+            applyFilters;
+
     }
 
-    form.dataset.resultInitialised =
-        "true";
 
-    form.addEventListener(
-        "submit",
-        submitTeacherResult
-    );
+    if (sectionFilter) {
+
+        sectionFilter.onchange =
+            applyFilters;
+
+    }
+
+
+    if (eventFilter) {
+
+        eventFilter.onchange =
+            applyFilters;
+
+    }
+
+
+    if (houseFilter) {
+
+        populateSelect(
+            houseFilter,
+            [
+                "RED",
+                "GREEN",
+                "BLUE",
+                "YELLOW"
+            ],
+            "All Houses"
+        );
+
+    }
+
+
+    if (sectionFilter) {
+
+        populateSelect(
+            sectionFilter,
+            SECTIONS,
+            "All Sections"
+        );
+
+    }
+
+
+    if (eventFilter) {
+
+        const uniqueEvents =
+            [
+                ...new Set(
+                    results
+                        .map(
+                            function (result) {
+                                return result.event;
+                            }
+                        )
+                        .filter(Boolean)
+                )
+            ]
+            .sort();
+
+        populateSelect(
+            eventFilter,
+            uniqueEvents,
+            "All Events"
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   36. SUBMIT TEACHER RESULT
+   RENDER EVERYTHING
    ========================================================= */
 
-async function submitTeacherResult(
-    event
+function renderEverything(
+    results
 ) {
 
-    event.preventDefault();
-
-    const form =
-        byId(
-            "teacher-result-form"
-        );
-
-    if (!form) {
-
-        alert(
-            "The teacher result form could not be found."
-        );
-
-        return;
-
-    }
-
-    if (!isTeacherLoggedIn()) {
-
-        alert(
-            "Please login as a teacher first."
-        );
-
-        return;
-
-    }
-
-
-    const categorySelect =
-        getTeacherCategorySelect();
-
-    const sectionSelect =
-        getTeacherSectionSelect();
-
-    const programSelect =
-        getTeacherProgramSelect();
-
-    const category =
-        getFormValue(
-            form,
-            [
-                "program_category",
-                "category"
-            ],
-            categorySelect?.value || ""
-        );
-
-    const section =
-        getFormValue(
-            form,
-            ["section"],
-            sectionSelect?.value || ""
-        );
-
-    const eventName =
-        getFormValue(
-            form,
-            [
-                "event",
-                "program"
-            ],
-            programSelect?.value || ""
-        );
-
-    const name =
-        getFormValue(
-            form,
-            [
-                "name",
-                "student_name"
-            ]
-        );
-
-    const studentClass =
-        getFormValue(
-            form,
-            [
-                "student_class",
-                "class"
-            ]
-        );
-
-    const team =
-        getFormValue(
-            form,
-            [
-                "team",
-                "house"
-            ]
-        );
-
-    const placeValue =
-        getFormValue(
-            form,
-            ["place"]
-        );
-
-    const participantValue =
-        getFormValue(
-            form,
-            [
-                "participant_count",
-                "participants"
-            ],
-            "1"
-        );
-
-    let activityType =
-        getFormValue(
-            form,
-            [
-                "activity_type"
-            ]
-        );
-
-
-    if (!activityType) {
-
-        activityType =
-            APP.currentProgram?.type ||
-            "individual";
-
-    }
-
-
-    /* -----------------------------------------------------
-       VALIDATION
-       ----------------------------------------------------- */
-
-    if (!category) {
-
-        alert(
-            "Please select the program category."
-        );
-
-        return;
-
-    }
-
-
-    if (!section) {
-
-        alert(
-            "Please select the section."
-        );
-
-        return;
-
-    }
-
-
-    if (!eventName) {
-
-        alert(
-            "Please select a program."
-        );
-
-        return;
-
-    }
-
-
-    if (!name) {
-
-        alert(
-            "Please enter the student or group name."
-        );
-
-        return;
-
-    }
-
-
-    if (!studentClass) {
-
-        alert(
-            "Please enter the class."
-        );
-
-        return;
-
-    }
-
-
-    const place =
-        toNumber(
-            placeValue
-        );
-
-    if (
-        ![1, 2, 3].includes(
-            place
-        )
-    ) {
-
-        alert(
-            "Please select 1st, 2nd, or 3rd place."
-        );
-
-        return;
-
-    }
-
-
-    const selectedProgram =
-        findProgram(
-            category,
-            section,
-            eventName
-        );
-
-
-    if (!selectedProgram) {
-
-        alert(
-            "The selected program could not be found."
-        );
-
-        return;
-
-    }
-
-
-    activityType =
-        selectedProgram.type;
-
-
-    let participantCount =
-        toNumber(
-            participantValue,
-            1
-        );
-
-
-    if (
-        activityType === "individual"
-    ) {
-
-        participantCount = 1;
-
-    }
-
-
-    if (
-        activityType === "group"
-    ) {
-
-        if (
-            participantCount < 1
-        ) {
-
-            alert(
-                "Please enter the number of participants."
-            );
-
-            return;
-
-        }
-
-
-        if (
-            selectedProgram.maxParticipants &&
-            participantCount >
-                selectedProgram.maxParticipants
-        ) {
-
-            alert(
-                `This program allows a maximum of ${selectedProgram.maxParticipants} participants.`
-            );
-
-            return;
-
-        }
-
-    }
-
-
-    /* -----------------------------------------------------
-       BUILD RESULT
-       ----------------------------------------------------- */
-
-    const result = {
-
-        id: createId(),
-
-        name: name,
-
-        studentClass:
-            studentClass,
-
-        section:
-            section,
-
-        activityType:
-            activityType,
-
-        programCategory:
-            category,
-
-        event:
-            eventName,
-
-        team:
-            team,
-
-        place:
-            place,
-
-        participantCount:
-            participantCount,
-
-        createdAt:
-            new Date().toISOString()
-
-    };
-
-
-    /* -----------------------------------------------------
-       SUBMIT
-       ----------------------------------------------------- */
-
-    const submitButton =
-        form.querySelector(
-            'button[type="submit"]'
-        );
-
-
-    const originalButtonText =
-        submitButton
-            ? submitButton.textContent
-            : "";
-
-
-    try {
-
-        if (submitButton) {
-
-            submitButton.disabled =
-                true;
-
-            submitButton.textContent =
-                "Publishing...";
-
-        }
-
-
-        await saveResult(
-            result
-        );
-
-
-        /*
-           IMPORTANT:
-           This is the direct form reference.
-           No currentTarget/cloneNode logic.
-        */
-
-        form.reset();
-
-
-        APP.currentProgram =
-            null;
-
-
-        updateProgramDetails();
-
-
-        renderAll();
-
-
-        alert(
-            "Result published successfully."
-        );
-
-    }
-    catch (error) {
-
-        console.error(
-            "Result submission failed:",
-            error
-        );
-
-
-        let message =
-            error?.message ||
-            "Unknown error";
-
-
-        /*
-           Make common Supabase errors
-           easier to understand.
-        */
-
-        if (
-            message.includes(
-                "row-level security"
-            )
-        ) {
-
-            message +=
-                "\n\nSupabase Row Level Security is blocking the operation.";
-
-        }
-
-
-        if (
-            message.includes(
-                "student_name"
-            )
-        ) {
-
-            message +=
-                "\n\nThe database still requires the student_name column.";
-
-        }
-
-
-        if (
-            message.includes(
-                "program"
-            )
-        ) {
-
-            message +=
-                "\n\nThe database still requires the program column.";
-
-        }
-
-
-        alert(
-            "THE RESULT COULD NOT BE SAVED.\n\n" +
-            message
-        );
-
-    }
-    finally {
-
-        if (submitButton) {
-
-            submitButton.disabled =
-                false;
-
-            submitButton.textContent =
-                originalButtonText ||
-                "Publish Result";
-
-        }
-
-    }
-
-}
-
-
-/* =========================================================
-   37. FILTER EVENT LISTENERS
-   ========================================================= */
-
-function setupFilters() {
-
-    all(
-        "[data-result-filter]"
-    ).forEach(
-        element => {
-
-            if (
-                element.dataset
-                    .filterInitialised ===
-                "true"
-            ) {
-                return;
-            }
-
-            element.dataset
-                .filterInitialised =
-                "true";
-
-            element.addEventListener(
-                "change",
-                renderPublicResults
-            );
-
-        }
+    results =
+        Array.isArray(results)
+            ? results
+            : [];
+
+    renderChampionship(
+        results
+    );
+
+    renderStatistics(
+        results
+    );
+
+    renderResultsTable(
+        results
+    );
+
+    renderPublicResults(
+        results
+    );
+
+    renderLatestResults(
+        results
+    );
+
+    setupFilters(
+        results
     );
 
 }
 
 
 /* =========================================================
-   38. REALTIME DATABASE
+   REALTIME SUPABASE
    ========================================================= */
 
 function setupRealtime() {
 
-    if (!supabaseIsReady()) {
-        return;
-    }
+    if (
+        !window.supabaseClient
+    ) {
 
+        return;
+
+    }
 
     try {
 
-        if (
-            APP.realtimeChannel
-        ) {
-
-            supabaseClient.removeChannel(
-                APP.realtimeChannel
-            );
-
-        }
-
-
-        APP.realtimeChannel =
-            supabaseClient
-                .channel(
-                    "mis-art-fest-live-results"
-                )
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "*",
-                        schema: "public",
-                        table:
-                            CONFIG.databaseTable
-                    },
-                    async () => {
-
-                        try {
-
-                            await loadResults();
-
-                            renderAll();
-
-                        }
-                        catch (error) {
-
-                            console.error(
-                                "Realtime refresh failed:",
-                                error
-                            );
-
-                        }
-
-                    }
-                )
-                .subscribe(
-                    status => {
-
-                        if (
-                            status ===
-                            "SUBSCRIBED"
-                        ) {
-
-                            updateConnectionStatus(
-                                "Live"
-                            );
-
-                        }
-
-                    }
-                );
-
-    }
-    catch (error) {
-
-        console.error(
-            "Realtime setup failed:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   39. CONNECTION STATUS
-   ========================================================= */
-
-function updateConnectionStatus(
-    state
-) {
-
-    const elements =
-        [
-            ...document.querySelectorAll(
-                "#connection-status, #status-indicator, #live-status, [data-connection-status]"
+        window.supabaseClient
+            .channel(
+                "mis-art-fest-results"
             )
-        ];
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: CONFIG.TABLE_NAME
+                },
+                function () {
 
-    elements.forEach(
-        element => {
+                    loadResults();
 
-            element.textContent =
-                state === "Live"
-                    ? "Live"
-                    : state;
+                }
+            )
+            .subscribe(
+                function (status) {
 
-            element.dataset.status =
-                state.toLowerCase();
+                    if (
+                        status ===
+                        "CHANNEL_ERROR"
+                    ) {
 
-        }
-    );
-
-}
-
-
-/* =========================================================
-   40. NAVIGATION
-   ========================================================= */
-
-function setupNavigation() {
-
-    all(
-        "[data-scroll]"
-    ).forEach(
-        link => {
-
-            if (
-                link.dataset
-                    .navigationInitialised ===
-                "true"
-            ) {
-                return;
-            }
-
-            link.dataset
-                .navigationInitialised =
-                "true";
-
-            link.addEventListener(
-                "click",
-                event => {
-
-                    const targetId =
-                        link.dataset.scroll;
-
-                    const target =
-                        byId(
-                            targetId
+                        console.warn(
+                            "Supabase realtime channel error."
                         );
 
-                    if (!target) {
-                        return;
                     }
-
-                    event.preventDefault();
-
-                    target.scrollIntoView(
-                        {
-                            behavior:
-                                "smooth",
-                            block:
-                                "start"
-                        }
-                    );
 
                 }
             );
 
-        }
-    );
+    } catch (error) {
+
+        console.error(
+            "Realtime setup error:",
+            error
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   41. MOBILE MENU
+   CONNECTION CHECK
    ========================================================= */
 
-function setupMobileMenu() {
-
-    const toggle =
-        firstExisting(
-            "menu-toggle",
-            "mobile-menu-toggle",
-            "nav-toggle"
-        );
-
-    const menu =
-        firstExisting(
-            "mobile-menu",
-            "nav-menu",
-            "main-nav"
-        );
+async function checkSupabaseConnection() {
 
     if (
-        !toggle ||
-        !menu
+        !window.supabaseClient
     ) {
-        return;
+
+        console.warn(
+            "Supabase client not available."
+        );
+
+        return false;
+
     }
 
+    try {
 
-    if (
-        toggle.dataset
-            .menuInitialised === "true"
-    ) {
-        return;
-    }
+        const {
+            error
+        } =
+            await window.supabaseClient
+                .from(CONFIG.TABLE_NAME)
+                .select("id")
+                .limit(1);
 
+        if (error) {
 
-    toggle.dataset
-        .menuInitialised =
-        "true";
-
-
-    toggle.addEventListener(
-        "click",
-        () => {
-
-            const open =
-                menu.classList.toggle(
-                    "open"
-                );
-
-            toggle.setAttribute(
-                "aria-expanded",
-                String(open)
+            console.error(
+                "Supabase connection error:",
+                error
             );
 
+            return false;
+
         }
-    );
 
-}
+        return true;
 
+    } catch (error) {
 
-/* =========================================================
-   42. SCROLL REVEAL
-   ========================================================= */
+        console.error(error);
 
-function setupScrollReveal() {
-
-    const elements =
-        document.querySelectorAll(
-            ".reveal, [data-reveal]"
-        );
-
-
-    if (
-        !elements.length
-    ) {
-        return;
-    }
-
-
-    if (
-        !("IntersectionObserver" in window)
-    ) {
-
-        elements.forEach(
-            element =>
-                element.classList.add(
-                    "is-visible"
-                )
-        );
-
-        return;
+        return false;
 
     }
 
-
-    const observer =
-        new IntersectionObserver(
-            entries => {
-
-                entries.forEach(
-                    entry => {
-
-                        if (
-                            entry.isIntersecting
-                        ) {
-
-                            entry.target.classList.add(
-                                "is-visible"
-                            );
-
-                            observer.unobserve(
-                                entry.target
-                            );
-
-                        }
-
-                    }
-                );
-
-            },
-            {
-                threshold: 0.1
-            }
-        );
+}
 
 
-    elements.forEach(
-        element =>
-            observer.observe(
-                element
-            )
+/* =========================================================
+   AUTO REFRESH
+   ========================================================= */
+
+function setupAutoRefresh() {
+
+    setInterval(
+        function () {
+
+            loadResults();
+
+        },
+        30000
     );
 
 }
 
 
 /* =========================================================
-   43. CURRENT YEAR
-   ========================================================= */
-
-function setupYear() {
-
-    document
-        .querySelectorAll(
-            "[data-current-year]"
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    "2026";
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   44. KEYBOARD SUPPORT
-   ========================================================= */
-
-function setupKeyboard() {
-
-    document.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key ===
-                "Escape"
-            ) {
-
-                document
-                    .querySelectorAll(
-                        "dialog[open]"
-                    )
-                    .forEach(
-                        dialog => {
-
-                            try {
-
-                                dialog.close();
-
-                            }
-                            catch (_) {}
-
-                        }
-                    );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   45. RENDER ALL
-   ========================================================= */
-
-function renderAll() {
-
-    populateFilters();
-
-    renderPublicResults();
-
-    renderTeacherResults();
-
-    renderChampionship();
-
-    renderStatistics();
-
-    renderLatestResults();
-
-}
-
-
-/* =========================================================
-   46. PAGE SETUP
-   ========================================================= */
-
-function setupPage() {
-
-    setupTeacherLogin();
-
-    setupTeacherLogout();
-
-    updateTeacherVisibility();
-
-    setupTeacherProgramSelection();
-
-    setupTeacherResultForm();
-
-    setupFilters();
-
-    setupNavigation();
-
-    setupMobileMenu();
-
-    setupScrollReveal();
-
-    setupYear();
-
-    setupKeyboard();
-
-}
-
-
-/* =========================================================
-   47. APPLICATION INITIALISATION
+   PAGE INITIALISATION
    ========================================================= */
 
 async function initialiseApp() {
 
-    if (APP.initialised) {
-        return;
-    }
-
-    APP.initialised =
-        true;
-
-
     try {
 
-        setupPage();
+        setupTeacherLogin();
 
+        setupTeacherLogout();
 
-        /*
-           Only attempt Supabase
-           operations when the client
-           actually exists.
-        */
-
-        if (!supabaseIsReady()) {
-
-            updateConnectionStatus(
-                "Offline"
-            );
-
-            console.error(
-                "Supabase client was not found."
-            );
-
-            /*
-               Don't immediately destroy
-               the whole website.
-            */
-
-            renderAll();
-
-            return;
-
-        }
-
+        setupTeacherResultForm();
 
         await loadResults();
 
-
-        renderAll();
-
-
         setupRealtime();
 
+        setupAutoRefresh();
 
-        updateConnectionStatus(
-            "Live"
-        );
+        await checkSupabaseConnection();
 
-    }
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "MIS Art Fest initialisation failed:",
+            "Application initialisation error:",
             error
         );
 
-
-        updateConnectionStatus(
-            "Connection Error"
-        );
-
-
-        renderAll();
-
-
-        /*
-           Show a useful message directly
-           to the user because you don't
-           need to open browser console.
-        */
-
         alert(
-            "MIS Art Fest could not connect to the live database.\n\n" +
-            (
-                error?.message ||
-                "Unknown error"
-            )
+            "MIS Art Fest application error:\n\n" +
+            error.message
         );
 
     }
@@ -3688,7 +2560,7 @@ async function initialiseApp() {
 
 
 /* =========================================================
-   48. START APPLICATION
+   DOM READY
    ========================================================= */
 
 if (
@@ -3698,14 +2570,10 @@ if (
 
     document.addEventListener(
         "DOMContentLoaded",
-        initialiseApp,
-        {
-            once: true
-        }
+        initialiseApp
     );
 
-}
-else {
+} else {
 
     initialiseApp();
 
