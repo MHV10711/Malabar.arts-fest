@@ -7,7 +7,7 @@ window.SUPABASE_URL =
     "https://jlitghsdscahpxjfywnr.supabase.co";
 
 window.SUPABASE_KEY =
-    "sb_publishable_Nwa9_cZlhLpEPCOERsYQw_JgROWSPW";
+    "sb_publishable_Nwa9_cZlhLpEPCOERsYeQw_JgROWSPW";
 
 if (!window.supabase) {
     throw new Error(
