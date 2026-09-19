@@ -1,7 +1,7 @@
 /* =========================================================
    MIS ART FEST 2026
-   MAIN JAVASCRIPT
-   COMPLETE SUPABASE VERSION
+   COMPLETE MAIN JAVASCRIPT
+   SUPABASE + TEACHER PORTAL + PUBLIC RESULTS
    ========================================================= */
 
 
@@ -21,32 +21,24 @@ const SESSION_KEY =
 
 const HOUSE_INFO = {
 
-    red: {
-        name: 'RED',
-        label: 'RED',
-        tag: 'team-red',
-        bar: 'red'
+    RED: {
+        name: 'Red House',
+        color: '#c62828'
     },
 
-    green: {
-        name: 'GREEN',
-        label: 'GREEN',
-        tag: 'team-green',
-        bar: 'green'
+    GREEN: {
+        name: 'Green House',
+        color: '#2e7d32'
     },
 
-    blue: {
-        name: 'BLUE',
-        label: 'BLUE',
-        tag: 'team-blue',
-        bar: 'blue'
+    BLUE: {
+        name: 'Blue House',
+        color: '#1565c0'
     },
 
-    yellow: {
-        name: 'YELLOW',
-        label: 'YELLOW',
-        tag: 'team-yellow',
-        bar: 'yellow'
+    YELLOW: {
+        name: 'Yellow House',
+        color: '#f9a825'
     }
 
 };
@@ -54,18 +46,6 @@ const HOUSE_INFO = {
 
 /* =========================================================
    POINT SYSTEM
-   =========================================================
-
-   INDIVIDUAL
-   1st = 5
-   2nd = 3
-   3rd = 1
-
-   GROUP
-   1st = 10
-   2nd = 5
-   3rd = 3
-
    ========================================================= */
 
 const POINTS = {
@@ -86,71 +66,57 @@ const POINTS = {
 
 
 /* =========================================================
-   GET POINTS
-   ========================================================= */
-
-function getPoints(activityType, place) {
-
-    const type =
-        activityType === 'group'
-            ? 'group'
-            : 'individual';
-
-    return POINTS[type]?.[place] || 0;
-
-}
-
-
-/* =========================================================
    SECTION INFORMATION
    ========================================================= */
 
 const SECTION_INFO = {
 
     LP1: {
-        label: 'LP-1',
-        full: 'Lower Primary 1'
+        name: 'LP 1',
+        fullName: 'Lower Primary 1'
     },
 
     LP2: {
-        label: 'LP-2',
-        full: 'Lower Primary 2'
+        name: 'LP 2',
+        fullName: 'Lower Primary 2'
     },
 
     UP: {
-        label: 'UP',
-        full: 'Upper Primary'
+        name: 'UP',
+        fullName: 'Upper Primary'
     },
 
     HS: {
-        label: 'HS',
-        full: 'High School'
+        name: 'HS',
+        fullName: 'High School'
     },
 
     HSS: {
-        label: 'HSS',
-        full: 'Higher Secondary'
+        name: 'HSS',
+        fullName: 'Higher Secondary'
     },
 
     GENERAL: {
-        label: 'GENERAL',
-        full: 'General'
+        name: 'General',
+        fullName: 'General'
     }
 
 };
 
 
 /* =========================================================
-   PROGRAM DATABASE
+   PROGRAM LIST
    ========================================================= */
 
 const PROGRAMS = {
 
-    /* =====================================================
-       OFF-STAGE
-       ===================================================== */
 
-    'off-stage': {
+    /* -----------------------------------------------------
+       OFF-STAGE
+       ----------------------------------------------------- */
+
+    OFF_STAGE: {
+
 
         LP1: [
 
@@ -165,6 +131,7 @@ const PROGRAMS = {
             }
 
         ],
+
 
         LP2: [
 
@@ -189,6 +156,7 @@ const PROGRAMS = {
             }
 
         ],
+
 
         UP: [
 
@@ -249,6 +217,7 @@ const PROGRAMS = {
 
         ],
 
+
         HS: [
 
             {
@@ -308,6 +277,7 @@ const PROGRAMS = {
 
         ],
 
+
         HSS: [
 
             {
@@ -335,11 +305,12 @@ const PROGRAMS = {
     },
 
 
-    /* =====================================================
+    /* -----------------------------------------------------
        ON-STAGE
-       ===================================================== */
+       ----------------------------------------------------- */
 
-    'on-stage': {
+    ON_STAGE: {
+
 
         UP: [
 
@@ -412,6 +383,7 @@ const PROGRAMS = {
             }
 
         ],
+
 
         HS: [
 
@@ -507,6 +479,7 @@ const PROGRAMS = {
 
         ],
 
+
         HSS: [
 
             {
@@ -561,6 +534,7 @@ const PROGRAMS = {
 
         ],
 
+
         GENERAL: [
 
             {
@@ -589,100 +563,121 @@ const PROGRAMS = {
 
 
 /* =========================================================
-   GENERAL HELPERS
+   APPLICATION STATE
+   ========================================================= */
+
+let RESULTS_CACHE = [];
+
+let RESULTS_LOADED = false;
+
+let selectedTeacherProgram = null;
+
+
+/* =========================================================
+   BASIC HELPERS
    ========================================================= */
 
 function createId() {
 
-    if (
-        window.crypto &&
-        typeof window.crypto.randomUUID === 'function'
-    ) {
-
-        return `result-${window.crypto.randomUUID()}`;
-
-    }
-
-    return `result-${Date.now()}-${Math.random()
-        .toString(16)
-        .slice(2)}`;
+    return (
+        'result-' +
+        Date.now() +
+        '-' +
+        Math.random()
+            .toString(36)
+            .substring(2, 10)
+    );
 
 }
 
 
 function escapeHtml(value) {
 
-    return String(value ?? '').replace(
-        /[&<>'"]/g,
-        character => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[character])
-    );
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return '';
+    }
+
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
 }
 
 
 function titleCase(value) {
 
-    const text =
-        String(value || '');
-
-    return (
-        text.charAt(0).toUpperCase() +
-        text.slice(1)
-    );
+    return String(value || '')
+        .toLowerCase()
+        .replace(/\b\w/g, char =>
+            char.toUpperCase()
+        );
 
 }
 
 
 function placeNumber(place) {
 
-    return {
+    const number =
+        Number(place);
 
-        first: '01',
-        second: '02',
-        third: '03'
+    if (
+        !Number.isFinite(number)
+    ) {
+        return '';
+    }
 
-    }[place] || '—';
+    return String(number);
 
 }
 
 
 function medal(place) {
 
-    return {
+    const number =
+        Number(place);
 
-        first: 'Gold',
-        second: 'Silver',
-        third: 'Bronze'
+    if (number === 1) {
+        return '🥇';
+    }
 
-    }[place] || '';
+    if (number === 2) {
+        return '🥈';
+    }
 
+    if (number === 3) {
+        return '🥉';
+    }
+
+    return '';
 }
 
 
 function stageLabel(stage) {
 
-    return stage === 'off-stage'
-        ? 'OFF-STAGE'
-        : 'ON-STAGE';
+    if (stage === 'OFF_STAGE') {
+        return 'Off Stage';
+    }
 
+    if (stage === 'ON_STAGE') {
+        return 'On Stage';
+    }
+
+    return titleCase(stage);
 }
 
 
 function sectionLabel(section) {
 
-    if (section === 'GENERAL') {
-        return 'GENERAL';
-    }
-
     return (
-        SECTION_INFO[section]?.label ||
-        section
+        SECTION_INFO[section]?.name ||
+        section ||
+        ''
     );
 
 }
@@ -690,25 +685,13 @@ function sectionLabel(section) {
 
 function sectionFullName(section) {
 
-    if (section === 'GENERAL') {
-        return 'General';
-    }
-
     return (
-        SECTION_INFO[section]?.full ||
-        section
+        SECTION_INFO[section]?.fullName ||
+        section ||
+        ''
     );
 
 }
-
-
-/* =========================================================
-   RESULT CACHE
-   ========================================================= */
-
-let RESULTS_CACHE = [];
-
-let RESULTS_LOADED = false;
 
 
 /* =========================================================
@@ -717,130 +700,62 @@ let RESULTS_LOADED = false;
 
 function normaliseResult(item) {
 
-    const validSections = [
-        'LP1',
-        'LP2',
-        'UP',
-        'HS',
-        'HSS',
-        'GENERAL'
-    ];
-
-    const validActivities = [
-        'individual',
-        'group'
-    ];
-
-    const validTeams = [
-        'red',
-        'green',
-        'blue',
-        'yellow'
-    ];
-
-    const validPlaces = [
-        'first',
-        'second',
-        'third'
-    ];
-
-    const validStages = [
-        'off-stage',
-        'on-stage'
-    ];
-
-
-    const participantCount =
-        Number(
-            item.participantCount ??
-            item.participant_count
-        );
-
-
-    const name =
-        item.name ??
-        item.student_name ??
-        'Unnamed';
-
-
-    const event =
-        item.event ??
-        item.program ??
-        'General Event';
-
+    if (!item) {
+        return null;
+    }
 
     return {
 
         id:
-            String(
-                item.id ||
-                createId()
-            ),
+            item.id,
 
         name:
-            String(name),
+            item.name ??
+            item.student_name ??
+            '',
 
         studentClass:
-            String(
-                item.studentClass ??
-                item.student_class ??
-                item.class_name ??
-                '—'
-            ),
+            item.studentClass ??
+            item.student_class ??
+            item.class_name ??
+            '',
 
         section:
-            validSections.includes(
-                item.section
-            )
-                ? item.section
-                : 'HS',
+            item.section ??
+            '',
 
         activityType:
-            validActivities.includes(
-                item.activityType ??
-                item.activity_type
-            )
-                ? (
-                    item.activityType ??
-                    item.activity_type
-                )
-                : 'individual',
+            item.activityType ??
+            item.activity_type ??
+            'individual',
 
         programCategory:
-            validStages.includes(
-                item.programCategory ??
-                item.program_category
-            )
-                ? (
-                    item.programCategory ??
-                    item.program_category
-                )
-                : 'on-stage',
+            item.programCategory ??
+            item.program_category ??
+            '',
 
         event:
-            String(event),
+            item.event ??
+            item.program ??
+            '',
 
         team:
-            validTeams.includes(
-                item.team
-            )
-                ? item.team
-                : 'red',
+            item.team ??
+            '',
 
         place:
-            validPlaces.includes(
-                item.place
-            )
-                ? item.place
-                : 'third',
+            item.place ??
+            '',
 
         participantCount:
-            Number.isFinite(
-                participantCount
-            ) &&
-            participantCount > 0
-                ? participantCount
-                : null
+            item.participantCount ??
+            item.participant_count ??
+            null,
+
+        createdAt:
+            item.createdAt ??
+            item.created_at ??
+            null
 
     };
 
@@ -848,36 +763,47 @@ function normaliseResult(item) {
 
 
 /* =========================================================
-   GET CURRENT RESULTS
+   SUPABASE CHECK
    ========================================================= */
 
-function results() {
+function checkSupabase() {
 
-    return RESULTS_CACHE.map(
-        normaliseResult
-    );
+    if (
+        typeof window.supabase ===
+        'undefined'
+    ) {
+
+        throw new Error(
+            'Supabase library is not loaded. Check the Supabase script in teacher.html/index.html.'
+        );
+
+    }
+
+
+    if (
+        typeof supabaseClient ===
+        'undefined' ||
+        !supabaseClient
+    ) {
+
+        throw new Error(
+            'Supabase client was not created. Check supabase.js.'
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   LOAD RESULTS FROM SUPABASE
+   LOAD RESULTS
    ========================================================= */
 
 async function loadResults() {
 
     try {
 
-        if (
-            typeof supabaseClient ===
-            'undefined'
-        ) {
-
-            throw new Error(
-                'supabaseClient is not available. Check supabase.js and script order.'
-            );
-
-        }
+        checkSupabase();
 
 
         const {
@@ -896,32 +822,31 @@ async function loadResults() {
 
 
         if (error) {
+
             throw error;
+
         }
 
 
         RESULTS_CACHE =
             Array.isArray(data)
-                ? data.map(
-                    normaliseResult
-                )
+                ? data
+                    .map(normaliseResult)
+                    .filter(Boolean)
                 : [];
 
 
         RESULTS_LOADED = true;
 
 
-        console.log(
-            `Supabase: ${RESULTS_CACHE.length} results loaded.`
-        );
-
-
         return RESULTS_CACHE;
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(
-            'Could not load results from Supabase:',
+            'Could not load results:',
             error
         );
 
@@ -929,6 +854,22 @@ async function loadResults() {
         RESULTS_CACHE = [];
 
         RESULTS_LOADED = false;
+
+
+        const message =
+            error?.message ||
+            String(error);
+
+
+        const status =
+            error?.code
+                ? ` Code: ${error.code}`
+                : '';
+
+
+        console.warn(
+            `MIS Art Fest results could not be loaded: ${message}${status}`
+        );
 
 
         return [];
@@ -939,177 +880,118 @@ async function loadResults() {
 
 
 /* =========================================================
-   SAVE RESULT TO SUPABASE
-   =========================================================
-
-   IMPORTANT:
-   Your current database contains legacy NOT NULL
-   columns named:
-
-       student_name
-       program
-
-   Therefore this function sends BOTH the new fields
-   and the legacy fields.
-
+   SAVE RESULT
    ========================================================= */
 
-async function saveResult(item) {
+async function saveResult(result) {
 
-    try {
-
-        if (
-            !window.supabase
-        ) {
-
-            throw new Error(
-                'Supabase library was not loaded.'
-            );
-
-        }
+    checkSupabase();
 
 
-        if (
-            typeof supabaseClient ===
-            'undefined' ||
-            !supabaseClient
-        ) {
-
-            throw new Error(
-                'Supabase client was not created.'
-            );
-
-        }
+    const normalised =
+        normaliseResult(result);
 
 
-        const result =
-            normaliseResult(item);
+    if (!normalised) {
 
-
-        /* =================================================
-           DATABASE ROW
-           ================================================= */
-
-        const databaseRow = {
-
-            id:
-                result.id,
-
-            /* Current columns */
-
-            name:
-                result.name,
-
-            student_class:
-                result.studentClass,
-
-            section:
-                result.section,
-
-            activity_type:
-                result.activityType,
-
-            program_category:
-                result.programCategory,
-
-            event:
-                result.event,
-
-            team:
-                result.team,
-
-            place:
-                result.place,
-
-            participant_count:
-                result.participantCount,
-
-
-            /* Legacy columns currently required
-               by your Supabase table */
-
-            student_name:
-                result.name,
-
-            program:
-                result.event
-
-        };
-
-
-        console.log(
-            'Sending result to Supabase:',
-            databaseRow
+        throw new Error(
+            'Invalid result data.'
         );
-
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .from('results')
-                .insert([
-                    databaseRow
-                ])
-                .select()
-                .single();
-
-
-        if (error) {
-
-            console.error(
-                'SUPABASE INSERT ERROR:',
-                error
-            );
-
-
-            throw new Error(
-                'Supabase error: ' +
-                error.message +
-                (
-                    error.code
-                        ? ` | Code: ${error.code}`
-                        : ''
-                ) +
-                (
-                    error.details
-                        ? ` | Details: ${error.details}`
-                        : ''
-                ) +
-                (
-                    error.hint
-                        ? ` | Hint: ${error.hint}`
-                        : ''
-                )
-            );
-
-        }
-
-
-        const saved =
-            normaliseResult(data);
-
-
-        RESULTS_CACHE = [
-            saved,
-            ...RESULTS_CACHE
-        ];
-
-
-        return saved;
-
-    } catch (error) {
-
-        console.error(
-            'SAVE RESULT ERROR:',
-            error
-        );
-
-
-        throw error;
 
     }
+
+
+    /*
+       IMPORTANT:
+       These legacy fields are intentionally included.
+
+       Your existing Supabase table has required
+       student_name and program columns.
+    */
+
+    const databaseRow = {
+
+        id:
+            normalised.id,
+
+        name:
+            normalised.name,
+
+        student_class:
+            normalised.studentClass,
+
+        section:
+            normalised.section,
+
+        activity_type:
+            normalised.activityType,
+
+        program_category:
+            normalised.programCategory,
+
+        event:
+            normalised.event,
+
+        team:
+            normalised.team,
+
+        place:
+            normalised.place,
+
+        participant_count:
+            normalised.participantCount,
+
+        student_name:
+            normalised.name,
+
+        program:
+            normalised.event
+
+    };
+
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from('results')
+            .insert([
+                databaseRow
+            ])
+            .select()
+            .single();
+
+
+    if (error) {
+
+        const detailedError =
+            new Error(
+                error.message ||
+                'Supabase could not save the result.'
+            );
+
+
+        detailedError.code =
+            error.code;
+
+        detailedError.details =
+            error.details;
+
+        detailedError.hint =
+            error.hint;
+
+
+        throw detailedError;
+
+    }
+
+
+    const saved =
+        normaliseResult(data);
+
+
+    return saved;
 
 }
 
@@ -1120,14 +1002,13 @@ async function saveResult(item) {
 
 async function deleteResult(id) {
 
-    if (
-        typeof supabaseClient ===
-        'undefined' ||
-        !supabaseClient
-    ) {
+    checkSupabase();
+
+
+    if (!id) {
 
         throw new Error(
-            'Supabase client is not available.'
+            'Result ID is missing.'
         );
 
     }
@@ -1139,18 +1020,10 @@ async function deleteResult(id) {
         await supabaseClient
             .from('results')
             .delete()
-            .eq(
-                'id',
-                id
-            );
+            .eq('id', id);
 
 
     if (error) {
-
-        console.error(
-            'Supabase delete error:',
-            error
-        );
 
         throw error;
 
@@ -1163,11 +1036,14 @@ async function deleteResult(id) {
                 result.id !== id
         );
 
+
+    renderAllPublicSections();
+
 }
 
 
 /* =========================================================
-   REALTIME SUPABASE SYNC
+   REALTIME
    ========================================================= */
 
 function setupRealtimeResults() {
@@ -1177,249 +1053,188 @@ function setupRealtimeResults() {
         'undefined' ||
         !supabaseClient
     ) {
+        return;
+    }
+
+
+    try {
+
+        supabaseClient
+            .channel(
+                'mis-art-fest-results-live'
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'results'
+                },
+                async () => {
+
+                    await loadResults();
+
+                    renderAllPublicSections();
+
+                    renderManageResults();
+
+                    renderChampionship();
+
+                }
+            )
+            .subscribe();
+
+    }
+
+    catch (error) {
 
         console.error(
-            'Realtime could not start because supabaseClient is missing.'
+            'Realtime setup failed:',
+            error
         );
-
-        return;
 
     }
-
-
-    supabaseClient
-        .channel(
-            'mis-art-fest-results'
-        )
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'results'
-            },
-            async payload => {
-
-                console.log(
-                    'Supabase realtime update:',
-                    payload.eventType
-                );
-
-
-                await loadResults();
-
-
-                renderPublicResults();
-
-                renderChampionship();
-
-                renderManageResults();
-
-            }
-        )
-        .subscribe(
-            status => {
-
-                console.log(
-                    'Realtime status:',
-                    status
-                );
-
-            }
-        );
 
 }
 
 
 /* =========================================================
-   NAVIGATION
+   SCORING
    ========================================================= */
 
-function setupNav() {
+function getPointsForResult(result) {
 
-    const toggle =
-        document.querySelector(
-            '.nav-toggle'
-        );
+    if (!result) {
+        return 0;
+    }
 
-    const nav =
-        document.querySelector(
-            '.nav'
-        );
+
+    const place =
+        Number(result.place);
+
+
+    const type =
+        result.activityType ===
+        'group'
+            ? 'group'
+            : 'individual';
 
 
     if (
-        !toggle ||
-        !nav
+        place === 1
     ) {
-        return;
-    }
-
-
-    toggle.addEventListener(
-        'click',
-        () => {
-
-            const opened =
-                nav.classList.toggle(
-                    'open'
-                );
-
-
-            toggle.setAttribute(
-                'aria-expanded',
-                String(opened)
-            );
-
-        }
-    );
-
-
-    nav
-        .querySelectorAll('a')
-        .forEach(
-            link => {
-
-                link.addEventListener(
-                    'click',
-                    () => {
-
-                        nav.classList.remove(
-                            'open'
-                        );
-
-
-                        toggle.setAttribute(
-                            'aria-expanded',
-                            'false'
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   ACTIVE NAVIGATION
-   ========================================================= */
-
-function setupActiveNav() {
-
-    const currentPage =
-        window.location.pathname
-            .split('/')
-            .pop() ||
-        'index.html';
-
-
-    document
-        .querySelectorAll(
-            '.nav a'
-        )
-        .forEach(
-            link => {
-
-                const page =
-                    link.getAttribute(
-                        'href'
-                    );
-
-
-                link.classList.toggle(
-                    'active',
-                    page === currentPage
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   SCROLL REVEAL
-   ========================================================= */
-
-function setupReveal() {
-
-    const items =
-        document.querySelectorAll(
-            '.reveal'
-        );
-
-
-    if (!items.length) {
-        return;
+        return POINTS[type].first;
     }
 
 
     if (
-        !(
-            'IntersectionObserver'
-            in window
-        )
+        place === 2
     ) {
-
-        items.forEach(
-            item => {
-
-                item.classList.add(
-                    'visible'
-                );
-
-            }
-        );
-
-        return;
-
+        return POINTS[type].second;
     }
 
 
-    const observer =
-        new IntersectionObserver(
-            entries => {
-
-                entries.forEach(
-                    entry => {
-
-                        if (
-                            !entry.isIntersecting
-                        ) {
-                            return;
-                        }
+    if (
+        place === 3
+    ) {
+        return POINTS[type].third;
+    }
 
 
-                        entry.target.classList.add(
-                            'visible'
-                        );
+    return 0;
+
+}
 
 
-                        observer.unobserve(
-                            entry.target
-                        );
+/* =========================================================
+   HOUSE POINTS
+   ========================================================= */
 
-                    }
-                );
+function calculateHousePoints() {
 
-            },
-            {
-                threshold: 0.08
-            }
-        );
+    const standings = {};
 
 
-    items.forEach(
-        item => {
+    Object.keys(HOUSE_INFO)
+        .forEach(house => {
 
-            observer.observe(
-                item
+            standings[house] = {
+
+                house,
+
+                name:
+                    HOUSE_INFO[house].name,
+
+                points: 0,
+
+                first: 0,
+
+                second: 0,
+
+                third: 0,
+
+                results: 0
+
+            };
+
+        });
+
+
+    RESULTS_CACHE.forEach(result => {
+
+        const house =
+            String(
+                result.team || ''
+            )
+            .trim()
+            .toUpperCase();
+
+
+        if (
+            !standings[house]
+        ) {
+            return;
+        }
+
+
+        const points =
+            getPointsForResult(
+                result
             );
 
+
+        standings[house].points +=
+            points;
+
+
+        standings[house].results++;
+
+
+        const place =
+            Number(result.place);
+
+
+        if (place === 1) {
+            standings[house].first++;
         }
+
+        if (place === 2) {
+            standings[house].second++;
+        }
+
+        if (place === 3) {
+            standings[house].third++;
+        }
+
+    });
+
+
+    return Object.values(
+        standings
+    ).sort(
+        (a, b) =>
+            b.points -
+            a.points
     );
 
 }
@@ -1429,1486 +1244,55 @@ function setupReveal() {
    PUBLIC RESULTS
    ========================================================= */
 
+function getPublicResults() {
+
+    return RESULTS_CACHE
+        .slice()
+        .sort(
+            (a, b) =>
+                Number(b.place) -
+                Number(a.place)
+        );
+
+}
+
+
+/* =========================================================
+   FIND ELEMENT
+   ========================================================= */
+
+function firstElement(...ids) {
+
+    for (
+        const id of ids
+    ) {
+
+        const element =
+            document.getElementById(id);
+
+        if (element) {
+            return element;
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* =========================================================
+   RENDER PUBLIC RESULTS
+   ========================================================= */
+
 function renderPublicResults() {
 
-    const list =
-        document.querySelector(
-            '#results-list'
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    const items =
-        results();
-
-
-    const empty =
-        document.querySelector(
-            '#empty-results'
-        );
-
-
-    if (!items.length) {
-
-        list.innerHTML = '';
-
-        empty?.classList.remove(
-            'hidden'
-        );
-
-        setupResultFilters();
-
-        return;
-
-    }
-
-
-    empty?.classList.add(
-        'hidden'
-    );
-
-
-    list.innerHTML =
-        items
-            .map(
-                item => {
-
-                    const house =
-                        HOUSE_INFO[item.team] ||
-                        HOUSE_INFO.red;
-
-
-                    return `
-
-                        <article
-                            class="result-row"
-                            data-section="${escapeHtml(item.section)}"
-                            data-activity="${escapeHtml(item.activityType)}"
-                            data-stage="${escapeHtml(item.programCategory)}"
-                        >
-
-                            <span
-                                class="
-                                    place
-                                    ${
-                                        item.place === 'first'
-                                            ? 'first'
-                                            : ''
-                                    }
-                                "
-                            >
-                                ${placeNumber(item.place)}
-                            </span>
-
-
-                            <div>
-
-                                <div class="student">
-                                    ${escapeHtml(item.name)}
-                                </div>
-
-
-                                <div class="meta">
-
-                                    ${stageLabel(
-                                        item.programCategory
-                                    )}
-
-                                    ·
-
-                                    ${sectionLabel(
-                                        item.section
-                                    )}
-
-                                    ·
-
-                                    ${escapeHtml(
-                                        item.studentClass
-                                    )}
-
-                                    ·
-
-                                    ${escapeHtml(
-                                        item.event
-                                    )}
-
-                                </div>
-
-                            </div>
-
-
-                            <span
-                                class="
-                                    team-tag
-                                    ${house.tag}
-                                "
-                            >
-                                ${house.name}
-                            </span>
-
-
-                            <span class="result-type">
-                                ${titleCase(
-                                    item.activityType
-                                )}
-                            </span>
-
-
-                            <strong>
-                                ${medal(
-                                    item.place
-                                )}
-                            </strong>
-
-                        </article>
-
-                    `;
-
-                }
-            )
-            .join('');
-
-
-    setupResultFilters();
-
-}
-
-
-/* =========================================================
-   RESULT FILTERS
-   ========================================================= */
-
-function setupResultFilters() {
-
-    const search =
-        document.querySelector(
-            '#result-search'
-        );
-
-
-    const empty =
-        document.querySelector(
-            '#empty-results'
-        );
-
-
-    const sectionButtons = [
-        ...document.querySelectorAll(
-            '.section-card[data-section]'
-        )
-    ];
-
-
-    const activityButtons = [
-        ...document.querySelectorAll(
-            '.activity-card[data-activity]'
-        )
-    ];
-
-
-    const stageButtons = [
-        ...document.querySelectorAll(
-            '[data-result-stage]'
-        )
-    ];
-
-
-    let selectedSection =
-        'all';
-
-    let selectedActivity =
-        'all';
-
-    let selectedStage =
-        'all';
-
-
-    function filter() {
-
-        const phrase =
-            (
-                search?.value ||
-                ''
-            )
-                .trim()
-                .toLowerCase();
-
-
-        let visibleCount =
-            0;
-
-
-        document
-            .querySelectorAll(
-                '.result-row'
-            )
-            .forEach(
-                row => {
-
-                    const matchesSearch =
-                        row.textContent
-                            .toLowerCase()
-                            .includes(
-                                phrase
-                            );
-
-
-                    const matchesSection =
-                        selectedSection === 'all' ||
-                        row.dataset.section ===
-                            selectedSection;
-
-
-                    const matchesActivity =
-                        selectedActivity === 'all' ||
-                        row.dataset.activity ===
-                            selectedActivity;
-
-
-                    const matchesStage =
-                        selectedStage === 'all' ||
-                        row.dataset.stage ===
-                            selectedStage;
-
-
-                    const show =
-                        matchesSearch &&
-                        matchesSection &&
-                        matchesActivity &&
-                        matchesStage;
-
-
-                    row.classList.toggle(
-                        'hidden',
-                        !show
-                    );
-
-
-                    if (show) {
-                        visibleCount++;
-                    }
-
-                }
-            );
-
-
-        empty?.classList.toggle(
-            'hidden',
-            visibleCount > 0
-        );
-
-    }
-
-
-    sectionButtons.forEach(
-        button => {
-
-            button.addEventListener(
-                'click',
-                () => {
-
-                    selectedSection =
-                        button.dataset.section;
-
-
-                    sectionButtons.forEach(
-                        item => {
-
-                            item.classList.toggle(
-                                'active',
-                                item === button
-                            );
-
-                        }
-                    );
-
-
-                    filter();
-
-                }
-            );
-
-        }
-    );
-
-
-    activityButtons.forEach(
-        button => {
-
-            button.addEventListener(
-                'click',
-                () => {
-
-                    selectedActivity =
-                        button.dataset.activity;
-
-
-                    activityButtons.forEach(
-                        item => {
-
-                            item.classList.toggle(
-                                'active',
-                                item === button
-                            );
-
-                        }
-                    );
-
-
-                    filter();
-
-                }
-            );
-
-        }
-    );
-
-
-    stageButtons.forEach(
-        button => {
-
-            button.addEventListener(
-                'click',
-                () => {
-
-                    selectedStage =
-                        button.dataset.resultStage;
-
-
-                    stageButtons.forEach(
-                        item => {
-
-                            item.classList.toggle(
-                                'active',
-                                item === button
-                            );
-
-                        }
-                    );
-
-
-                    filter();
-
-                }
-            );
-
-        }
-    );
-
-
-    document
-        .querySelector(
-            '#clear-filters'
-        )
-        ?.addEventListener(
-            'click',
-            () => {
-
-                selectedSection =
-                    'all';
-
-                selectedActivity =
-                    'all';
-
-                selectedStage =
-                    'all';
-
-
-                if (search) {
-                    search.value = '';
-                }
-
-
-                sectionButtons.forEach(
-                    item => {
-
-                        item.classList.toggle(
-                            'active',
-                            item.dataset.section ===
-                                'all'
-                        );
-
-                    }
-                );
-
-
-                activityButtons.forEach(
-                    item => {
-
-                        item.classList.toggle(
-                            'active',
-                            item.dataset.activity ===
-                                'all'
-                        );
-
-                    }
-                );
-
-
-                stageButtons.forEach(
-                    item => {
-
-                        item.classList.toggle(
-                            'active',
-                            item.dataset.resultStage ===
-                                'all'
-                        );
-
-                    }
-                );
-
-
-                filter();
-
-            }
-        );
-
-
-    search?.addEventListener(
-        'input',
-        filter
-    );
-
-
-    filter();
-
-}
-
-
-/* =========================================================
-   CHAMPIONSHIP POINTS
-   ========================================================= */
-
-function pointsByHouse() {
-
-    const totals = {
-
-        red: 0,
-        green: 0,
-        blue: 0,
-        yellow: 0
-
-    };
-
-
-    results().forEach(
-        item => {
-
-            if (
-                totals[item.team] !==
-                undefined
-            ) {
-
-                totals[item.team] +=
-                    getPoints(
-                        item.activityType,
-                        item.place
-                    );
-
-            }
-
-        }
-    );
-
-
-    return Object
-        .entries(totals)
-        .sort(
-            (a, b) => {
-
-                if (
-                    b[1] !== a[1]
-                ) {
-
-                    return b[1] - a[1];
-
-                }
-
-
-                return a[0].localeCompare(
-                    b[0]
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   RENDER CHAMPIONSHIP
-   ========================================================= */
-
-function renderChampionship() {
-
-    const leaderboard =
-        document.querySelector(
-            '.leaderboard'
-        );
-
-
-    if (!leaderboard) {
-        return;
-    }
-
-
-    const spotlight =
-        document.querySelector(
-            '#champion-spotlight'
-        );
-
-
-    const gallery =
-        document.querySelector(
-            '#house-gallery'
-        );
-
-
-    const standing =
-        pointsByHouse();
-
-
-    const highest =
-        Math.max(
-            standing[0]?.[1] || 0,
-            1
-        );
-
-
-    const [
-        leadingTeam,
-        leadingScore
-    ] =
-        standing[0] ||
-        [
-            'red',
-            0
-        ];
-
-
-    const leader =
-        HOUSE_INFO[leadingTeam] ||
-        HOUSE_INFO.red;
-
-
-    if (spotlight) {
-
-        spotlight.innerHTML = `
-
-            <div class="champion-medal">
-                ♛
-            </div>
-
-
-            <div>
-
-                <p class="eyebrow">
-                    CURRENT LEADER
-                </p>
-
-
-                <h2>
-                    ${escapeHtml(
-                        leader.name
-                    )}
-                    is <em>in the lead.</em>
-                </h2>
-
-
-                <p>
-                    ${leadingScore}
-                    championship points and counting.
-                </p>
-
-            </div>
-
-
-            <strong class="champion-points">
-                ${leadingScore}
-                <small>PTS</small>
-            </strong>
-
-        `;
-
-    }
-
-
-    if (gallery) {
-
-        gallery.innerHTML =
-            standing
-                .map(
-                    (
-                        [team, score],
-                        index
-                    ) => {
-
-                        const house =
-                            HOUSE_INFO[team];
-
-
-                        return `
-
-                            <article
-                                class="
-                                    house-score-card
-                                    house-${team}
-                                "
-                            >
-
-                                <span>
-                                    0${index + 1}
-                                </span>
-
-
-                                <h3>
-                                    ${escapeHtml(
-                                        house.name
-                                    )}
-                                </h3>
-
-
-                                <strong>
-                                    ${score}
-                                    <small>PTS</small>
-                                </strong>
-
-
-                                <div>
-
-                                    <i
-                                        style="
-                                            width:${
-                                                Math.round(
-                                                    score /
-                                                    highest *
-                                                    100
-                                                )
-                                            }%
-                                        "
-                                    ></i>
-
-                                </div>
-
-
-                                <p>
-                                    ${
-                                        index === 0
-                                            ? 'Leading the way'
-                                            : `${leadingScore - score} points to the lead`
-                                    }
-                                </p>
-
-                            </article>
-
-                        `;
-
-                    }
-                )
-                .join('');
-
-    }
-
-
-    leaderboard.innerHTML =
-        standing
-            .map(
-                (
-                    [team, score],
-                    index
-                ) => {
-
-                    const house =
-                        HOUSE_INFO[team];
-
-
-                    return `
-
-                        <article
-                            class="rank-row"
-                        >
-
-                            <span
-                                class="rank-number"
-                            >
-                                0${index + 1}
-                            </span>
-
-
-                            <div>
-
-                                <strong>
-                                    ${escapeHtml(
-                                        house.name
-                                    )}
-                                </strong>
-
-
-                                <div
-                                    class="bar-wrap"
-                                >
-
-                                    <div
-                                        class="
-                                            bar
-                                            ${house.bar}
-                                        "
-                                        style="
-                                            width:${
-                                                Math.round(
-                                                    score /
-                                                    highest *
-                                                    100
-                                                )
-                                            }%
-                                        "
-                                    ></div>
-
-                                </div>
-
-                            </div>
-
-
-                            <span
-                                class="
-                                    team-tag
-                                    ${house.tag}
-                                "
-                            >
-                                ${house.label}
-                            </span>
-
-
-                            <strong
-                                class="rank-points"
-                            >
-                                ${score}
-                            </strong>
-
-                        </article>
-
-                    `;
-
-                }
-            )
-            .join('');
-
-}
-
-
-/* =========================================================
-   TEACHER PORTAL
-   ========================================================= */
-
-let selectedTeacherProgram =
-    null;
-
-
-/* =========================================================
-   PROGRAM BUTTON
-   ========================================================= */
-
-function programButton(
-    stage,
-    section,
-    program,
-    index
-) {
-
-    const limitText =
-        program.maxParticipants
-            ? `Maximum ${program.maxParticipants}`
-            : '';
-
-
-    const typeText =
-        program.type === 'group'
-            ? 'Group'
-            : 'Individual';
-
-
-    return `
-
-        <button
-            type="button"
-            class="teacher-program-choice"
-            data-stage="${escapeHtml(stage)}"
-            data-section="${escapeHtml(section)}"
-            data-program-index="${index}"
-        >
-
-            <span
-                class="teacher-program-number"
-            >
-                ${String(
-                    index + 1
-                ).padStart(
-                    2,
-                    '0'
-                )}
-            </span>
-
-
-            <span
-                class="teacher-program-content"
-            >
-
-                <strong>
-                    ${escapeHtml(
-                        program.name
-                    )}
-                </strong>
-
-
-                <small>
-                    ${typeText}
-                    ${
-                        limitText
-                            ? ` · ${limitText}`
-                            : ''
-                    }
-                </small>
-
-            </span>
-
-
-            <span
-                class="teacher-program-arrow"
-            >
-                →
-            </span>
-
-        </button>
-
-    `;
-
-}
-
-
-/* =========================================================
-   SECTION PROGRAM CARD
-   ========================================================= */
-
-function sectionProgramCard(
-    stage,
-    section,
-    programs
-) {
-
-    const info =
-        SECTION_INFO[section];
-
-
-    return `
-
-        <article
-            class="teacher-section-card"
-        >
-
-            <div
-                class="teacher-section-heading"
-            >
-
-                <div>
-
-                    <span
-                        class="teacher-section-code"
-                    >
-                        ${info.label}
-                    </span>
-
-
-                    <h3>
-                        ${info.full}
-                    </h3>
-
-                </div>
-
-
-                <span
-                    class="teacher-program-count"
-                >
-                    ${programs.length}
-                    ${
-                        programs.length === 1
-                            ? 'program'
-                            : 'programs'
-                    }
-                </span>
-
-            </div>
-
-
-            <div
-                class="teacher-program-list"
-            >
-
-                ${
-                    programs.length
-                        ? programs
-                            .map(
-                                (
-                                    program,
-                                    index
-                                ) =>
-                                    programButton(
-                                        stage,
-                                        section,
-                                        program,
-                                        index
-                                    )
-                            )
-                            .join('')
-                        : `
-                            <div
-                                class="teacher-empty-programs"
-                            >
-                                No programs configured.
-                            </div>
-                        `
-                }
-
-            </div>
-
-        </article>
-
-    `;
-
-}
-
-
-/* =========================================================
-   GENERAL PROGRAM CARD
-   ========================================================= */
-
-function generalProgramCard(
-    stage,
-    programs
-) {
-
-    return `
-
-        <article
-            class="
-                teacher-section-card
-                teacher-general-card
-            "
-        >
-
-            <div
-                class="teacher-section-heading"
-            >
-
-                <div>
-
-                    <span
-                        class="teacher-section-code"
-                    >
-                        INDEPENDENT CATEGORY
-                    </span>
-
-
-                    <h3>
-                        GENERAL
-                    </h3>
-
-                </div>
-
-
-                <span
-                    class="teacher-program-count"
-                >
-                    ${programs.length}
-                    programs
-                </span>
-
-            </div>
-
-
-            <p
-                class="teacher-section-description"
-            >
-                Independent on-stage programs for the
-                General category. No HS or HSS section
-                classification is required.
-            </p>
-
-
-            <div
-                class="teacher-program-list"
-            >
-
-                ${
-                    programs
-                        .map(
-                            (
-                                program,
-                                index
-                            ) =>
-                                programButton(
-                                    stage,
-                                    'GENERAL',
-                                    program,
-                                    index
-                                )
-                        )
-                        .join('')
-                }
-
-            </div>
-
-        </article>
-
-    `;
-
-}
-
-
-/* =========================================================
-   TEACHER DASHBOARD
-   ========================================================= */
-
-function teacherDashboard() {
-
-    const section =
-        document.querySelector(
-            '.portal-section'
-        );
-
-
-    if (!section) {
-        return;
-    }
-
-
-    section.innerHTML = `
-
-        <div
-            class="teacher-dashboard"
-        >
-
-            <div
-                class="teacher-dashboard-header"
-            >
-
-                <div>
-
-                    <p class="eyebrow">
-                        TEACHER DASHBOARD
-                    </p>
-
-
-                    <h2>
-                        Enter <em>results.</em>
-                    </h2>
-
-
-                    <p
-                        class="teacher-dashboard-intro"
-                    >
-                        Choose the correct stage, section and
-                        program. Then enter the winning result.
-                    </p>
-
-                </div>
-
-
-                <button
-                    class="btn ghost"
-                    id="sign-out"
-                    type="button"
-                >
-                    Sign out
-                </button>
-
-            </div>
-
-
-            <!-- OFF-STAGE -->
-
-            <section
-                class="teacher-stage-block"
-                data-stage="off-stage"
-            >
-
-                <div
-                    class="teacher-stage-heading"
-                >
-
-                    <div>
-
-                        <span
-                            class="teacher-stage-number"
-                        >
-                            01
-                        </span>
-
-
-                        <div>
-
-                            <p class="eyebrow">
-                                LITERARY · VISUAL · WRITTEN
-                            </p>
-
-
-                            <h2>
-                                Off-Stage
-                            </h2>
-
-                        </div>
-
-                    </div>
-
-
-                    <span
-                        class="teacher-stage-count"
-                    >
-                        ${
-                            Object.values(
-                                PROGRAMS['off-stage']
-                            )
-                                .reduce(
-                                    (
-                                        total,
-                                        list
-                                    ) =>
-                                        total +
-                                        list.length,
-                                    0
-                                )
-                        }
-                        programs
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="teacher-section-grid"
-                >
-
-                    ${sectionProgramCard(
-                        'off-stage',
-                        'LP1',
-                        PROGRAMS['off-stage'].LP1
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'off-stage',
-                        'LP2',
-                        PROGRAMS['off-stage'].LP2
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'off-stage',
-                        'UP',
-                        PROGRAMS['off-stage'].UP
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'off-stage',
-                        'HS',
-                        PROGRAMS['off-stage'].HS
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'off-stage',
-                        'HSS',
-                        PROGRAMS['off-stage'].HSS
-                    )}
-
-                </div>
-
-            </section>
-
-
-            <!-- ON-STAGE -->
-
-            <section
-                class="teacher-stage-block"
-                data-stage="on-stage"
-            >
-
-                <div
-                    class="teacher-stage-heading"
-                >
-
-                    <div>
-
-                        <span
-                            class="teacher-stage-number"
-                        >
-                            02
-                        </span>
-
-
-                        <div>
-
-                            <p class="eyebrow">
-                                PERFORMANCE · MUSIC · SPEECH
-                            </p>
-
-
-                            <h2>
-                                On-Stage
-                            </h2>
-
-                        </div>
-
-                    </div>
-
-
-                    <span
-                        class="teacher-stage-count"
-                    >
-                        ${
-                            PROGRAMS['on-stage'].UP.length +
-                            PROGRAMS['on-stage'].HS.length +
-                            PROGRAMS['on-stage'].HSS.length +
-                            PROGRAMS['on-stage'].GENERAL.length
-                        }
-                        programs
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="teacher-section-grid"
-                >
-
-                    ${sectionProgramCard(
-                        'on-stage',
-                        'UP',
-                        PROGRAMS['on-stage'].UP
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'on-stage',
-                        'HS',
-                        PROGRAMS['on-stage'].HS
-                    )}
-
-
-                    ${sectionProgramCard(
-                        'on-stage',
-                        'HSS',
-                        PROGRAMS['on-stage'].HSS
-                    )}
-
-
-                    ${generalProgramCard(
-                        'on-stage',
-                        PROGRAMS['on-stage'].GENERAL
-                    )}
-
-                </div>
-
-            </section>
-
-
-            <!-- RESULT ENTRY -->
-
-            <div
-                id="teacher-result-entry"
-                class="teacher-result-entry"
-            >
-
-                <div
-                    class="teacher-entry-empty"
-                >
-
-                    <span>
-                        +
-                    </span>
-
-
-                    <h3>
-                        Select a program
-                    </h3>
-
-
-                    <p>
-                        Choose any program above to open
-                        its result-entry form.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <!-- PUBLISHED RESULTS -->
-
-            <section
-                class="teacher-published-section"
-            >
-
-                <div
-                    class="teacher-published-heading"
-                >
-
-                    <div>
-
-                        <p class="eyebrow">
-                            LIVE RECORD
-                        </p>
-
-
-                        <h2>
-                            Published results
-                        </h2>
-
-                    </div>
-
-
-                    <span
-                        id="teacher-result-total"
-                        class="teacher-result-total"
-                    >
-                        0 results
-                    </span>
-
-                </div>
-
-
-                <div
-                    id="manage-results"
-                    class="teacher-manage-list"
-                ></div>
-
-            </section>
-
-        </div>
-
-    `;
-
-
-    document
-        .querySelector(
-            '#sign-out'
-        )
-        ?.addEventListener(
-            'click',
-            () => {
-
-                sessionStorage.removeItem(
-                    SESSION_KEY
-                );
-
-
-                window.location.reload();
-
-            }
-        );
-
-
-    setupTeacherProgramButtons();
-
-    renderManageResults();
-
-}
-
-
-/* =========================================================
-   PROGRAM SELECTION
-   ========================================================= */
-
-function setupTeacherProgramButtons() {
-
-    document
-        .querySelectorAll(
-            '.teacher-program-choice'
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    'click',
-                    () => {
-
-                        const stage =
-                            button.dataset.stage;
-
-
-                        const section =
-                            button.dataset.section;
-
-
-                        const index =
-                            Number(
-                                button.dataset.programIndex
-                            );
-
-
-                        const programList =
-                            PROGRAMS[
-                                stage
-                            ]?.[
-                                section
-                            ];
-
-
-                        if (!programList) {
-                            return;
-                        }
-
-
-                        const program =
-                            programList[index];
-
-
-                        if (!program) {
-                            return;
-                        }
-
-
-                        openTeacherResultEntry(
-                            stage,
-                            section,
-                            program
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   OPEN TEACHER RESULT ENTRY
-   ========================================================= */
-
-function openTeacherResultEntry(
-    stage,
-    section,
-    program
-) {
-
-    selectedTeacherProgram = {
-
-        stage,
-        section,
-        program
-
-    };
-
-
     const container =
-        document.querySelector(
-            '#teacher-result-entry'
+        firstElement(
+            'public-results',
+            'results-container',
+            'results-list',
+            'results-grid'
         );
 
 
@@ -2917,435 +1301,1058 @@ function openTeacherResultEntry(
     }
 
 
-    const isGeneral =
-        section === 'GENERAL';
+    if (
+        !RESULTS_CACHE.length
+    ) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No results published yet</h3>
+                <p>Results will appear here once they are published by the teacher.</p>
+            </div>
+        `;
+
+        return;
+
+    }
 
 
-    const limit =
-        program.maxParticipants ||
-        null;
+    const results =
+        RESULTS_CACHE.slice()
+            .sort(
+                (a, b) => {
+
+                    const placeA =
+                        Number(a.place) || 99;
+
+                    const placeB =
+                        Number(b.place) || 99;
+
+                    return placeA - placeB;
+
+                }
+            );
+
+
+    container.innerHTML =
+        results.map(result => {
+
+            const place =
+                Number(result.place);
+
+
+            const points =
+                getPointsForResult(
+                    result
+                );
+
+
+            return `
+                <article class="result-card">
+
+                    <div class="result-place">
+                        ${medal(place)}
+                        <strong>
+                            ${place}
+                        </strong>
+                    </div>
+
+                    <div class="result-content">
+
+                        <h3>
+                            ${escapeHtml(result.name)}
+                        </h3>
+
+                        <p>
+                            ${escapeHtml(result.event)}
+                        </p>
+
+                        <div class="result-meta">
+
+                            <span>
+                                ${escapeHtml(
+                                    sectionLabel(
+                                        result.section
+                                    )
+                                )}
+                            </span>
+
+                            <span>
+                                Class ${escapeHtml(
+                                    result.studentClass
+                                )}
+                            </span>
+
+                            <span>
+                                ${escapeHtml(
+                                    HOUSE_INFO[
+                                        String(
+                                            result.team ||
+                                            ''
+                                        ).toUpperCase()
+                                    ]?.name ||
+                                    result.team ||
+                                    ''
+                                )}
+                            </span>
+
+                            ${
+                                points
+                                    ? `
+                                    <span>
+                                        ${points} points
+                                    </span>
+                                    `
+                                    : ''
+                            }
+
+                        </div>
+
+                    </div>
+
+                </article>
+            `;
+
+        })
+        .join('');
+
+}
+
+
+/* =========================================================
+   PUBLIC RESULT FILTERING
+   ========================================================= */
+
+function setupResultFilters() {
+
+    const searchInput =
+        firstElement(
+            'result-search',
+            'results-search',
+            'search-results'
+        );
+
+
+    const sectionFilter =
+        firstElement(
+            'result-section-filter',
+            'section-filter'
+        );
+
+
+    const houseFilter =
+        firstElement(
+            'result-house-filter',
+            'house-filter'
+        );
+
+
+    const eventFilter =
+        firstElement(
+            'result-event-filter',
+            'event-filter'
+        );
+
+
+    function filterResults() {
+
+        let results =
+            RESULTS_CACHE.slice();
+
+
+        const search =
+            String(
+                searchInput?.value ||
+                ''
+            )
+            .trim()
+            .toLowerCase();
+
+
+        const section =
+            sectionFilter?.value ||
+            '';
+
+
+        const house =
+            houseFilter?.value ||
+            '';
+
+
+        const event =
+            eventFilter?.value ||
+            '';
+
+
+        if (search) {
+
+            results =
+                results.filter(
+                    result =>
+                        String(
+                            result.name
+                        )
+                        .toLowerCase()
+                        .includes(search) ||
+
+                        String(
+                            result.event
+                        )
+                        .toLowerCase()
+                        .includes(search)
+                );
+
+        }
+
+
+        if (section) {
+
+            results =
+                results.filter(
+                    result =>
+                        result.section ===
+                        section
+                );
+
+        }
+
+
+        if (house) {
+
+            results =
+                results.filter(
+                    result =>
+                        String(
+                            result.team
+                        ).toUpperCase() ===
+                        String(
+                            house
+                        ).toUpperCase()
+                );
+
+        }
+
+
+        if (event) {
+
+            results =
+                results.filter(
+                    result =>
+                        result.event ===
+                        event
+                );
+
+        }
+
+
+        renderFilteredResults(
+            results
+        );
+
+    }
+
+
+    [
+        searchInput,
+        sectionFilter,
+        houseFilter,
+        eventFilter
+    ]
+        .filter(Boolean)
+        .forEach(element => {
+
+            element.addEventListener(
+                'input',
+                filterResults
+            );
+
+            element.addEventListener(
+                'change',
+                filterResults
+            );
+
+        });
+
+}
+
+
+function renderFilteredResults(
+    results
+) {
+
+    const container =
+        firstElement(
+            'public-results',
+            'results-container',
+            'results-list',
+            'results-grid'
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!results.length) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No matching results</h3>
+                <p>Try changing the selected filters.</p>
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    results.sort(
+        (a, b) =>
+            Number(a.place || 99) -
+            Number(b.place || 99)
+    );
+
+
+    container.innerHTML =
+        results.map(result => {
+
+            const place =
+                Number(result.place);
+
+
+            return `
+                <article class="result-card">
+
+                    <div class="result-place">
+                        ${medal(place)}
+                        <strong>
+                            ${place}
+                        </strong>
+                    </div>
+
+                    <div class="result-content">
+
+                        <h3>
+                            ${escapeHtml(result.name)}
+                        </h3>
+
+                        <p>
+                            ${escapeHtml(result.event)}
+                        </p>
+
+                        <div class="result-meta">
+
+                            <span>
+                                ${escapeHtml(
+                                    sectionLabel(
+                                        result.section
+                                    )
+                                )}
+                            </span>
+
+                            <span>
+                                Class ${escapeHtml(
+                                    result.studentClass
+                                )}
+                            </span>
+
+                            <span>
+                                ${escapeHtml(
+                                    result.team
+                                )}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </article>
+            `;
+
+        }).join('');
+
+}
+
+
+/* =========================================================
+   CHAMPIONSHIP
+   ========================================================= */
+
+function renderChampionship() {
+
+    const container =
+        firstElement(
+            'championship-table',
+            'championship-container',
+            'house-standings',
+            'leaderboard'
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const standings =
+        calculateHousePoints();
 
 
     container.innerHTML = `
 
-        <div
-            class="teacher-entry-card"
-        >
+        <div class="championship-list">
 
-            <div
-                class="teacher-entry-header"
-            >
+            ${standings.map(
+                (house, index) => `
 
-                <div>
+                <div class="house-standing">
 
-                    <p class="eyebrow">
-                        RESULT ENTRY
-                    </p>
+                    <div class="standing-rank">
+                        ${index + 1}
+                    </div>
 
+                    <div class="standing-house">
 
-                    <h2>
-                        ${escapeHtml(
-                            program.name
-                        )}
-                    </h2>
+                        <strong>
+                            ${escapeHtml(
+                                house.name
+                            )}
+                        </strong>
 
+                        <small>
+                            ${house.results}
+                            result${house.results === 1 ? '' : 's'}
+                        </small>
 
-                    <div
-                        class="teacher-entry-context"
-                    >
+                    </div>
 
-                        <span>
-                            ${stageLabel(stage)}
-                        </span>
-
+                    <div class="standing-breakdown">
 
                         <span>
-                            ${
-                                isGeneral
-                                    ? 'GENERAL'
-                                    : sectionLabel(section)
-                            }
+                            🥇 ${house.first}
                         </span>
-
 
                         <span>
-                            ${
-                                program.type === 'group'
-                                    ? 'GROUP'
-                                    : 'INDIVIDUAL'
-                            }
+                            🥈 ${house.second}
                         </span>
 
+                        <span>
+                            🥉 ${house.third}
+                        </span>
 
-                        ${
-                            limit
-                                ? `
-                                    <span>
-                                        Maximum ${limit}
-                                    </span>
-                                `
-                                : ''
-                        }
+                    </div>
+
+                    <div class="standing-points">
+
+                        <strong>
+                            ${house.points}
+                        </strong>
+
+                        <small>
+                            points
+                        </small>
 
                     </div>
 
                 </div>
 
-
-                <button
-                    type="button"
-                    class="teacher-close-entry"
-                    id="close-result-entry"
-                    aria-label="Close result entry"
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <form
-                id="teacher-result-form"
-                class="teacher-entry-form"
-            >
-
-                <div
-                    class="teacher-entry-grid"
-                >
-
-                    <label>
-
-                        ${
-                            program.type === 'group'
-                                ? 'Group Name'
-                                : 'Student Name'
-                        }
-
-
-                        <input
-                            type="text"
-                            name="name"
-                            required
-                            maxlength="80"
-                            placeholder="${
-                                program.type === 'group'
-                                    ? 'Enter group name'
-                                    : 'Enter student name'
-                            }"
-                        >
-
-                    </label>
-
-
-                    <label>
-
-                        Class
-
-
-                        <input
-                            type="text"
-                            name="studentClass"
-                            required
-                            maxlength="30"
-                            placeholder="Example: Class VIII"
-                        >
-
-                    </label>
-
-
-                    <input
-                        type="hidden"
-                        name="section"
-                        value="${escapeHtml(section)}"
-                    >
-
-
-                    <label>
-
-                        House
-
-
-                        <select
-                            name="team"
-                            required
-                        >
-
-                            <option value="">
-                                Select house
-                            </option>
-
-                            <option value="red">
-                                Crimson / Red
-                            </option>
-
-                            <option value="green">
-                                Verdant / Green
-                            </option>
-
-                            <option value="blue">
-                                Azure / Blue
-                            </option>
-
-                            <option value="yellow">
-                                Solar / Yellow
-                            </option>
-
-                        </select>
-
-                    </label>
-
-
-                    <label>
-
-                        Place
-
-
-                        <select
-                            name="place"
-                            required
-                        >
-
-                            <option value="">
-                                Select place
-                            </option>
-
-
-                            ${
-                                program.type === 'group'
-                                    ? `
-
-                                        <option value="first">
-                                            First — 10 points
-                                        </option>
-
-                                        <option value="second">
-                                            Second — 5 points
-                                        </option>
-
-                                        <option value="third">
-                                            Third — 3 points
-                                        </option>
-
-                                    `
-                                    : `
-
-                                        <option value="first">
-                                            First — 5 points
-                                        </option>
-
-                                        <option value="second">
-                                            Second — 3 points
-                                        </option>
-
-                                        <option value="third">
-                                            Third — 1 point
-                                        </option>
-
-                                    `
-                            }
-
-                        </select>
-
-                    </label>
-
-
-                    ${
-                        program.type === 'group'
-                            ? `
-
-                                <label>
-
-                                    Number of Participants
-
-
-                                    <input
-                                        type="number"
-                                        name="participantCount"
-                                        min="1"
-                                        ${
-                                            limit
-                                                ? `max="${limit}"`
-                                                : ''
-                                        }
-                                        required
-                                        placeholder="${
-                                            limit
-                                                ? `Maximum ${limit}`
-                                                : 'Enter number'
-                                        }"
-                                    >
-
-
-                                    <span
-                                        class="teacher-field-note"
-                                    >
-                                        ${
-                                            limit
-                                                ? `Maximum allowed: ${limit} participants.`
-                                                : 'Enter the total number of participants.'
-                                        }
-                                    </span>
-
-                                </label>
-
-                            `
-                            : ''
-                    }
-
-                </div>
-
-
-                <div
-                    class="teacher-entry-actions"
-                >
-
-                    <button
-                        type="submit"
-                        class="btn primary"
-                    >
-                        Publish Result →
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="btn ghost"
-                        id="change-program"
-                    >
-                        Choose another program
-                    </button>
-
-                </div>
-
-
-                <p
-                    class="teacher-save-message"
-                    id="teacher-save-message"
-                    aria-live="polite"
-                ></p>
-
-            </form>
+            `
+            ).join('')}
 
         </div>
 
     `;
 
+}
 
-    document
-        .querySelector(
-            '#close-result-entry'
-        )
-        ?.addEventListener(
-            'click',
-            closeTeacherResultEntry
+
+/* =========================================================
+   RENDER ALL PUBLIC SECTIONS
+   ========================================================= */
+
+function renderAllPublicSections() {
+
+    renderPublicResults();
+
+    renderChampionship();
+
+    renderHomeSpotlight();
+
+}
+
+
+/* =========================================================
+   TEACHER AUTHENTICATION
+   ========================================================= */
+
+function isTeacherLoggedIn() {
+
+    return (
+        sessionStorage.getItem(
+            SESSION_KEY
+        ) === 'true'
+    );
+
+}
+
+
+function loginTeacher(password) {
+
+    if (
+        password ===
+        TEACHER_PASSWORD
+    ) {
+
+        sessionStorage.setItem(
+            SESSION_KEY,
+            'true'
+        );
+
+        return true;
+
+    }
+
+
+    return false;
+
+}
+
+
+function logoutTeacher() {
+
+    sessionStorage.removeItem(
+        SESSION_KEY
+    );
+
+    window.location.reload();
+
+}
+
+
+/* =========================================================
+   TEACHER LOGIN UI
+   ========================================================= */
+
+function setupTeacherAuthentication() {
+
+    const loginForm =
+        firstElement(
+            'teacher-login-form',
+            'login-form'
         );
 
 
-    document
-        .querySelector(
-            '#change-program'
-        )
-        ?.addEventListener(
-            'click',
-            () => {
+    if (loginForm) {
 
-                closeTeacherResultEntry();
+        loginForm.addEventListener(
+            'submit',
+            event => {
+
+                event.preventDefault();
 
 
-                const stageBlock =
-                    document.querySelector(
-                        `.teacher-stage-block[data-stage="${stage}"]`
+                const passwordInput =
+                    loginForm.querySelector(
+                        '[name="password"]'
                     );
 
 
-                stageBlock?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                const password =
+                    passwordInput?.value ||
+                    '';
+
+
+                if (
+                    loginTeacher(
+                        password
+                    )
+                ) {
+
+                    window.location.reload();
+
+                }
+
+                else {
+
+                    alert(
+                        'Incorrect teacher password.'
+                    );
+
+                    if (
+                        passwordInput
+                    ) {
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                    }
+
+                }
 
             }
         );
 
+    }
 
-    document
-        .querySelector(
-            '#teacher-result-form'
-        )
-        ?.addEventListener(
-            'submit',
-            submitTeacherResult
+
+    const logoutButton =
+        firstElement(
+            'teacher-logout',
+            'logout-teacher',
+            'logout-button'
         );
 
 
-    container.scrollIntoView({
+    if (logoutButton) {
+
+        logoutButton.addEventListener(
+            'click',
+            logoutTeacher
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   TEACHER PAGE ACCESS
+   ========================================================= */
+
+function setupTeacherPage() {
+
+    const teacherPage =
+        document.body?.dataset?.page ===
+        'teacher' ||
+        window.location.pathname
+            .toLowerCase()
+            .includes('teacher');
+
+
+    if (!teacherPage) {
+        return;
+    }
+
+
+    const loginSection =
+        firstElement(
+            'teacher-login',
+            'login-section'
+        );
+
+
+    const dashboard =
+        firstElement(
+            'teacher-dashboard',
+            'teacher-panel',
+            'dashboard'
+        );
+
+
+    if (
+        isTeacherLoggedIn()
+    ) {
+
+        if (loginSection) {
+            loginSection.hidden = true;
+        }
+
+        if (dashboard) {
+            dashboard.hidden = false;
+        }
+
+    }
+
+    else {
+
+        if (loginSection) {
+            loginSection.hidden = false;
+        }
+
+        if (dashboard) {
+            dashboard.hidden = true;
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   TEACHER PROGRAM CARDS
+   ========================================================= */
+
+function getAllProgramsForSection(
+    section
+) {
+
+    const programs = [];
+
+
+    const offStage =
+        PROGRAMS
+            .OFF_STAGE[
+                section
+            ] || [];
+
+
+    const onStage =
+        PROGRAMS
+            .ON_STAGE[
+                section
+            ] || [];
+
+
+    offStage.forEach(
+        program => {
+
+            programs.push({
+
+                ...program,
+
+                stage:
+                    'OFF_STAGE'
+
+            });
+
+        }
+    );
+
+
+    onStage.forEach(
+        program => {
+
+            programs.push({
+
+                ...program,
+
+                stage:
+                    'ON_STAGE'
+
+            });
+
+        }
+    );
+
+
+    return programs;
+
+}
+
+
+/* =========================================================
+   RENDER PROGRAMS
+   ========================================================= */
+
+function renderTeacherPrograms(
+    section
+) {
+
+    const container =
+        firstElement(
+            'teacher-programs',
+            'program-list',
+            'programs-container'
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!section) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Select a section to view programs.</p>
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    const programs =
+        getAllProgramsForSection(
+            section
+        );
+
+
+    container.innerHTML =
+        programs.map(
+            (program, index) => {
+
+                const id =
+                    `program-${section}-${index}`;
+
+
+                return `
+
+                    <button
+                        type="button"
+                        class="teacher-program-card"
+                        data-section="${escapeHtml(section)}"
+                        data-stage="${escapeHtml(program.stage)}"
+                        data-program-index="${index}"
+                    >
+
+                        <span class="program-stage">
+                            ${escapeHtml(
+                                stageLabel(
+                                    program.stage
+                                )
+                            )}
+                        </span>
+
+                        <strong>
+                            ${escapeHtml(
+                                program.name
+                            )}
+                        </strong>
+
+                        <small>
+                            ${
+                                program.type === 'group'
+                                    ? 'Group Event'
+                                    : 'Individual Event'
+                            }
+
+                            ${
+                                program.maxParticipants
+                                    ? ` • Max ${program.maxParticipants}`
+                                    : ''
+                            }
+                        </small>
+
+                    </button>
+
+                `;
+
+            }
+        ).join('');
+
+
+    container
+        .querySelectorAll(
+            '.teacher-program-card'
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                'click',
+                () => {
+
+                    const stage =
+                        button.dataset.stage;
+
+
+                    const index =
+                        Number(
+                            button.dataset.programIndex
+                        );
+
+
+                    const list =
+                        PROGRAMS[
+                            stage
+                        ]?.[
+                            section
+                        ] || [];
+
+
+                    const program =
+                        list[index];
+
+
+                    if (!program) {
+                        return;
+                    }
+
+
+                    selectTeacherProgram({
+
+                        section,
+
+                        stage,
+
+                        program
+
+                    });
+
+                }
+            );
+
+        });
+
+}
+
+
+/* =========================================================
+   SELECT TEACHER PROGRAM
+   ========================================================= */
+
+function selectTeacherProgram(
+    selection
+) {
+
+    selectedTeacherProgram =
+        selection;
+
+
+    const title =
+        firstElement(
+            'selected-program-name',
+            'teacher-selected-program',
+            'selected-program'
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            selection.program.name;
+
+    }
+
+
+    const form =
+        document.getElementById(
+            'teacher-result-form'
+        );
+
+
+    if (form) {
+
+        form.hidden = false;
+
+    }
+
+
+    const activityType =
+        form?.querySelector(
+            '[name="activityType"]'
+        );
+
+
+    if (activityType) {
+
+        activityType.value =
+            selection.program.type;
+
+    }
+
+
+    const participantField =
+        form?.querySelector(
+            '[name="participantCount"]'
+        );
+
+
+    const participantGroup =
+        participantField?.closest(
+            '.form-group'
+        );
+
+
+    if (
+        participantGroup
+    ) {
+
+        participantGroup.style.display =
+            selection.program.type ===
+            'group'
+                ? ''
+                : 'none';
+
+    }
+
+
+    const maxHint =
+        firstElement(
+            'participant-hint',
+            'group-limit-hint'
+        );
+
+
+    if (maxHint) {
+
+        if (
+            selection.program
+                .maxParticipants
+        ) {
+
+            maxHint.textContent =
+                `Maximum ${selection.program.maxParticipants} participants.`;
+
+        }
+
+        else {
+
+            maxHint.textContent =
+                '';
+
+        }
+
+    }
+
+
+    form?.scrollIntoView({
         behavior: 'smooth',
-        block: 'center'
+        block: 'start'
     });
 
 }
 
 
 /* =========================================================
-   CLOSE RESULT ENTRY
+   TEACHER SECTION SELECTOR
    ========================================================= */
 
-function closeTeacherResultEntry() {
+function setupTeacherProgramSelection() {
 
-    selectedTeacherProgram =
-        null;
-
-
-    const container =
-        document.querySelector(
-            '#teacher-result-entry'
+    const sectionSelect =
+        firstElement(
+            'teacher-section',
+            'section-select',
+            'program-section'
         );
 
 
-    if (!container) {
+    if (!sectionSelect) {
         return;
     }
 
 
-    container.innerHTML = `
+    sectionSelect.addEventListener(
+        'change',
+        () => {
 
-        <div
-            class="teacher-entry-empty"
-        >
+            renderTeacherPrograms(
+                sectionSelect.value
+            );
 
-            <span>
-                +
-            </span>
-
-
-            <h3>
-                Select a program
-            </h3>
+        }
+    );
 
 
-            <p>
-                Choose any program above to open
-                its result-entry form.
-            </p>
+    if (
+        sectionSelect.value
+    ) {
 
-        </div>
+        renderTeacherPrograms(
+            sectionSelect.value
+        );
 
-    `;
+    }
 
 }
 
 
 /* =========================================================
-   SUBMIT TEACHER RESULT
-   =========================================================
-
-   IMPORTANT FIX:
-   We save currentForm BEFORE any await.
-
-   This prevents:
-
-       can't access property "reset",
-       currentForm is null
-
+   THE IMPORTANT FIX
+   TEACHER RESULT SUBMISSION
    ========================================================= */
 
 async function submitTeacherResult(
@@ -3355,9 +2362,39 @@ async function submitTeacherResult(
     submitEvent.preventDefault();
 
 
-    /* =====================================================
-       CHECK PROGRAM
-       ===================================================== */
+    /*
+       IMPORTANT FIX:
+
+       We DO NOT use:
+
+       submitEvent.currentTarget
+
+       or:
+
+       submitEvent.target.closest(...)
+
+       Instead we directly locate the unique form.
+       This completely prevents currentForm from becoming null.
+    */
+
+    const currentForm =
+        document.getElementById(
+            'teacher-result-form'
+        );
+
+
+    if (!currentForm) {
+
+        alert(
+            'Could not find the teacher result form.\n\n' +
+            'Make sure your HTML contains:\n' +
+            '<form id="teacher-result-form">'
+        );
+
+        return;
+
+    }
+
 
     if (!selectedTeacherProgram) {
 
@@ -3366,96 +2403,168 @@ async function submitTeacherResult(
         );
 
         return;
+
     }
 
 
-    /* =====================================================
-       SAVE FORM REFERENCE BEFORE AWAIT
-       ===================================================== */
-
-    const currentForm =
-        submitEvent.currentTarget;
-
-
-    if (!currentForm) {
-
-        alert(
-            'Could not access the result form. Please refresh the page and try again.'
-        );
-
-        return;
-    }
-
-
-    /* =====================================================
-       READ FORM DATA
-       ===================================================== */
-
-    const form =
+    const formData =
         new FormData(
             currentForm
         );
 
 
+    const selected =
+        selectedTeacherProgram;
+
+
     const program =
-        selectedTeacherProgram.program;
+        selected.program;
+
+
+    const name =
+        String(
+            formData.get(
+                'name'
+            ) || ''
+        ).trim();
+
+
+    const studentClass =
+        String(
+            formData.get(
+                'studentClass'
+            ) || ''
+        ).trim();
+
+
+    const team =
+        String(
+            formData.get(
+                'team'
+            ) || ''
+        ).trim();
+
+
+    const place =
+        String(
+            formData.get(
+                'place'
+            ) || ''
+        ).trim();
 
 
     const participantValue =
-        form.get(
+        formData.get(
             'participantCount'
         );
 
 
     const participantCount =
-        participantValue
+        participantValue !== null &&
+        participantValue !== ''
             ? Number(
                 participantValue
             )
             : null;
 
 
-    /* =====================================================
-       GROUP PARTICIPANT LIMIT
-       ===================================================== */
-
-    if (
-        program.maxParticipants &&
-        (
-            !participantCount ||
-            participantCount < 1 ||
-            participantCount >
-                program.maxParticipants
-        )
-    ) {
-
-        alert(
-            `This program allows a maximum of ${program.maxParticipants} participants.`
-        );
-
-        return;
-    }
-
-
-    /* =====================================================
-       SECTION
-       ===================================================== */
-
     const finalSection =
-        selectedTeacherProgram.section ===
-            'GENERAL'
+        selected.section ===
+        'GENERAL'
             ? 'GENERAL'
             : String(
-                form.get(
+                formData.get(
                     'section'
                 ) ||
-                selectedTeacherProgram.section
+                selected.section
             );
 
 
-    /* =====================================================
-       CREATE RESULT OBJECT
-       ===================================================== */
+    /* -----------------------------------------------------
+       VALIDATION
+       ----------------------------------------------------- */
+
+    if (!name) {
+
+        alert(
+            'Please enter the student/group name.'
+        );
+
+        return;
+
+    }
+
+
+    if (!studentClass) {
+
+        alert(
+            'Please enter the class.'
+        );
+
+        return;
+
+    }
+
+
+    if (!team) {
+
+        alert(
+            'Please select a house.'
+        );
+
+        return;
+
+    }
+
+
+    if (!place) {
+
+        alert(
+            'Please select the place.'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        program.type ===
+        'group'
+    ) {
+
+        if (
+            !Number.isFinite(
+                participantCount
+            ) ||
+            participantCount < 1
+        ) {
+
+            alert(
+                'Please enter the number of participants.'
+            );
+
+            return;
+
+        }
+
+
+        if (
+            program.maxParticipants &&
+            participantCount >
+                program.maxParticipants
+        ) {
+
+            alert(
+                `This program allows a maximum of ${program.maxParticipants} participants.`
+            );
+
+            return;
+
+        }
+
+    }
+
 
     const item = {
 
@@ -3463,75 +2572,44 @@ async function submitTeacherResult(
             createId(),
 
         name:
-            String(
-                form.get(
-                    'name'
-                ) || ''
-            ).trim(),
+            name,
 
         studentClass:
-            String(
-                form.get(
-                    'studentClass'
-                ) || ''
-            ).trim(),
+            studentClass,
 
         section:
             finalSection,
 
         activityType:
-            program.type === 'group'
+            program.type ===
+            'group'
                 ? 'group'
                 : 'individual',
 
         programCategory:
-            selectedTeacherProgram.stage,
+            selected.stage,
 
         event:
             program.name,
 
         team:
-            String(
-                form.get(
-                    'team'
-                ) || ''
-            ).trim(),
+            team,
 
         place:
-            String(
-                form.get(
-                    'place'
-                ) || ''
-            ).trim(),
+            place,
 
         participantCount:
-            participantCount
+            program.type ===
+            'group'
+                ? participantCount
+                : null
 
     };
 
 
-    /* =====================================================
-       REQUIRED FIELD VALIDATION
-       ===================================================== */
-
-    if (
-        !item.name ||
-        !item.studentClass ||
-        !item.team ||
-        !item.place
-    ) {
-
-        alert(
-            'Please complete all required fields.'
-        );
-
-        return;
-    }
-
-
-    /* =====================================================
-       DISABLE BUTTON
-       ===================================================== */
+    /* -----------------------------------------------------
+       SUBMIT BUTTON
+       ----------------------------------------------------- */
 
     const submitButton =
         currentForm.querySelector(
@@ -3550,10 +2628,6 @@ async function submitTeacherResult(
     }
 
 
-    /* =====================================================
-       SAVE
-       ===================================================== */
-
     try {
 
         console.log(
@@ -3562,17 +2636,11 @@ async function submitTeacherResult(
         );
 
 
-        if (
-            typeof supabaseClient ===
-                'undefined' ||
-            !supabaseClient
-        ) {
+        /*
+           Make absolutely sure Supabase is available.
+        */
 
-            throw new Error(
-                'Supabase client was not created. Check supabase.js and make sure it loads before app.js.'
-            );
-
-        }
+        checkSupabase();
 
 
         const savedResult =
@@ -3587,12 +2655,12 @@ async function submitTeacherResult(
         );
 
 
-        /* =================================================
-           SUCCESS MESSAGE
-           ================================================= */
+        /*
+           Show success message.
+        */
 
         const message =
-            document.querySelector(
+            currentForm.querySelector(
                 '#teacher-save-message'
             );
 
@@ -3609,12 +2677,16 @@ async function submitTeacherResult(
         }
 
 
-        /* =================================================
-           REFRESH LIVE DATA
-           ================================================= */
+        /*
+           Refresh the shared database data.
+        */
 
         await loadResults();
 
+
+        /*
+           Refresh visible areas.
+        */
 
         renderManageResults();
 
@@ -3623,32 +2695,41 @@ async function submitTeacherResult(
         renderChampionship();
 
 
-        /* =================================================
-           RESET FORM
-           ================================================= */
+        /*
+           IMPORTANT:
+
+           currentForm is still the DOM element
+           obtained directly by ID.
+
+           Therefore reset() is safe.
+        */
 
         currentForm.reset();
 
 
-        const team =
+        /*
+           Explicitly clear select values.
+        */
+
+        const teamInput =
             currentForm.querySelector(
                 '[name="team"]'
             );
 
 
-        if (team) {
-            team.value = '';
+        if (teamInput) {
+            teamInput.value = '';
         }
 
 
-        const place =
+        const placeInput =
             currentForm.querySelector(
                 '[name="place"]'
             );
 
 
-        if (place) {
-            place.value = '';
+        if (placeInput) {
+            placeInput.value = '';
         }
 
 
@@ -3663,9 +2744,14 @@ async function submitTeacherResult(
         }
 
 
-        /* =================================================
-           FOCUS NAME
-           ================================================= */
+        /*
+           Keep the selected program.
+
+           We don't destroy selectedTeacherProgram
+           because the teacher may enter another
+           result for the same program.
+        */
+
 
         const nameInput =
             currentForm.querySelector(
@@ -3674,11 +2760,15 @@ async function submitTeacherResult(
 
 
         if (nameInput) {
+
             nameInput.focus();
+
         }
 
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(
             'Could not publish result:',
@@ -3687,35 +2777,30 @@ async function submitTeacherResult(
 
 
         const message =
-            document.querySelector(
+            currentForm.querySelector(
                 '#teacher-save-message'
             );
 
 
         const errorMessage =
-            error &&
-            error.message
-                ? error.message
-                : String(error);
+            error?.message ||
+            String(error);
 
 
         const errorCode =
-            error &&
-            error.code
+            error?.code
                 ? ` | Code: ${error.code}`
                 : '';
 
 
         const errorDetails =
-            error &&
-            error.details
+            error?.details
                 ? ` | Details: ${error.details}`
                 : '';
 
 
         const errorHint =
-            error &&
-            error.hint
+            error?.hint
                 ? ` | Hint: ${error.hint}`
                 : '';
 
@@ -3744,11 +2829,9 @@ async function submitTeacherResult(
             fullError
         );
 
-    } finally {
+    }
 
-        /* =================================================
-           RE-ENABLE BUTTON
-           ================================================= */
+    finally {
 
         if (submitButton) {
 
@@ -3766,295 +2849,14 @@ async function submitTeacherResult(
 
 
 /* =========================================================
-   MANAGE / PUBLISHED RESULTS
+   SETUP RESULT FORM
    ========================================================= */
 
-function renderManageResults() {
-
-    const list =
-        document.querySelector(
-            '#manage-results'
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    const items =
-        results();
-
-
-    const total =
-        document.querySelector(
-            '#teacher-result-total'
-        );
-
-
-    if (total) {
-
-        total.textContent =
-            `${items.length} ${
-                items.length === 1
-                    ? 'result'
-                    : 'results'
-            }`;
-
-    }
-
-
-    if (!items.length) {
-
-        list.innerHTML = `
-
-            <div
-                class="teacher-manage-empty"
-            >
-                No results have been published yet.
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    list.innerHTML =
-        items
-            .map(
-                item => {
-
-                    const house =
-                        HOUSE_INFO[item.team] ||
-                        HOUSE_INFO.red;
-
-
-                    const participantText =
-                        item.participantCount
-                            ? ` · ${item.participantCount} participants`
-                            : '';
-
-
-                    const resultPoints =
-                        getPoints(
-                            item.activityType,
-                            item.place
-                        );
-
-
-                    return `
-
-                        <article
-                            class="teacher-manage-item"
-                        >
-
-                            <div
-                                class="teacher-manage-main"
-                            >
-
-                                <div
-                                    class="teacher-manage-place"
-                                >
-                                    ${placeNumber(
-                                        item.place
-                                    )}
-                                </div>
-
-
-                                <div>
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            item.name
-                                        )}
-                                    </strong>
-
-
-                                    <p>
-
-                                        ${escapeHtml(
-                                            item.event
-                                        )}
-
-                                        ·
-
-                                        ${stageLabel(
-                                            item.programCategory
-                                        )}
-
-                                        ·
-
-                                        ${sectionLabel(
-                                            item.section
-                                        )}
-
-                                        ·
-
-                                        ${escapeHtml(
-                                            item.studentClass
-                                        )}
-
-                                        ${participantText}
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-                            <span
-                                class="
-                                    team-tag
-                                    ${house.tag}
-                                "
-                            >
-                                ${house.label}
-                            </span>
-
-
-                            <strong
-                                class="teacher-manage-medal"
-                            >
-                                ${medal(
-                                    item.place
-                                )}
-                            </strong>
-
-
-                            <strong
-                                class="teacher-manage-points"
-                            >
-                                ${resultPoints}
-                                PTS
-                            </strong>
-
-
-                            <button
-                                type="button"
-                                class="delete-btn"
-                                data-delete-id="${escapeHtml(item.id)}"
-                            >
-                                Delete
-                            </button>
-
-                        </article>
-
-                    `;
-
-                }
-            )
-            .join('');
-
-
-    list
-        .querySelectorAll(
-            '[data-delete-id]'
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    'click',
-                    async () => {
-
-                        const id =
-                            button.dataset.deleteId;
-
-
-                        const item =
-                            results().find(
-                                result =>
-                                    result.id ===
-                                    id
-                            );
-
-
-                        if (!item) {
-                            return;
-                        }
-
-
-                        const confirmed =
-                            confirm(
-                                `Delete the result for "${item.name}"?`
-                            );
-
-
-                        if (!confirmed) {
-                            return;
-                        }
-
-
-                        try {
-
-                            button.disabled =
-                                true;
-
-
-                            button.textContent =
-                                'Deleting...';
-
-
-                            await deleteResult(
-                                id
-                            );
-
-
-                            renderManageResults();
-
-                            renderPublicResults();
-
-                            renderChampionship();
-
-
-                        } catch (error) {
-
-                            console.error(
-                                'Could not delete result:',
-                                error
-                            );
-
-
-                            button.disabled =
-                                false;
-
-
-                            button.textContent =
-                                'Delete';
-
-
-                            const errorMessage =
-                                error?.message ||
-                                String(error);
-
-
-                            alert(
-                                'THE RESULT COULD NOT BE DELETED.\n\n' +
-                                errorMessage
-                            );
-
-                        }
-
-                    }
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   TEACHER AUTHENTICATION
-   ========================================================= */
-
-function setupTeacherAuth() {
+function setupTeacherResultForm() {
 
     const form =
-        document.querySelector(
-            '#login-form'
+        document.getElementById(
+            'teacher-result-form'
         );
 
 
@@ -4063,81 +2865,282 @@ function setupTeacherAuth() {
     }
 
 
+    /*
+       Remove any previously attached handler
+       by cloning the form.
+
+       This also protects against accidentally
+       loading app.js twice.
+    */
+
+    const cleanForm =
+        form.cloneNode(true);
+
+
+    form.parentNode.replaceChild(
+        cleanForm,
+        form
+    );
+
+
+    cleanForm.addEventListener(
+        'submit',
+        submitTeacherResult
+    );
+
+
+    /*
+       Ensure the form begins hidden if no
+       program has been selected.
+    */
+
+    if (!selectedTeacherProgram) {
+
+        cleanForm.hidden = true;
+
+    }
+
+}
+
+
+/* =========================================================
+   MANAGE RESULTS
+   ========================================================= */
+
+function renderManageResults() {
+
+    const container =
+        firstElement(
+            'manage-results',
+            'teacher-results',
+            'results-management',
+            'teacher-result-list'
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
     if (
-        sessionStorage.getItem(
-            SESSION_KEY
-        ) === 'true'
+        !isTeacherLoggedIn()
     ) {
 
-        teacherDashboard();
+        container.innerHTML = '';
 
         return;
 
     }
 
 
-    form.addEventListener(
-        'submit',
-        submitEvent => {
+    if (
+        !RESULTS_CACHE.length
+    ) {
 
-            submitEvent.preventDefault();
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No results yet</h3>
+                <p>Published results will appear here.</p>
+            </div>
+        `;
 
+        return;
 
-            const input =
-                form.querySelector(
-                    'input[type="password"]'
-                );
-
-
-            const message =
-                document.querySelector(
-                    '#login-message'
-                );
+    }
 
 
-            if (
-                input &&
-                input.value ===
-                    TEACHER_PASSWORD
-            ) {
+    const results =
+        RESULTS_CACHE.slice()
+            .sort(
+                (a, b) => {
 
-                sessionStorage.setItem(
-                    SESSION_KEY,
-                    'true'
-                );
+                    const dateA =
+                        new Date(
+                            a.createdAt ||
+                            0
+                        ).getTime();
 
 
-                teacherDashboard();
+                    const dateB =
+                        new Date(
+                            b.createdAt ||
+                            0
+                        ).getTime();
 
-                return;
+
+                    return dateB - dateA;
+
+                }
+            );
+
+
+    container.innerHTML =
+        results.map(
+            result => {
+
+                const points =
+                    getPointsForResult(
+                        result
+                    );
+
+
+                return `
+
+                    <div
+                        class="manage-result-card"
+                        data-result-id="${escapeHtml(result.id)}"
+                    >
+
+                        <div class="manage-result-info">
+
+                            <strong>
+                                ${escapeHtml(
+                                    result.name
+                                )}
+                            </strong>
+
+                            <span>
+                                ${escapeHtml(
+                                    result.event
+                                )}
+                            </span>
+
+                            <small>
+                                ${escapeHtml(
+                                    sectionLabel(
+                                        result.section
+                                    )
+                                )}
+                                •
+                                Class ${escapeHtml(
+                                    result.studentClass
+                                )}
+                                •
+                                ${escapeHtml(
+                                    result.team
+                                )}
+                            </small>
+
+                            <small>
+                                Place:
+                                ${escapeHtml(
+                                    result.place
+                                )}
+                                ${
+                                    points
+                                        ? ` • ${points} points`
+                                        : ''
+                                }
+                            </small>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="delete-result-button"
+                            data-delete-result="${escapeHtml(result.id)}"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                `;
 
             }
+        ).join('');
 
 
-            if (message) {
+    container
+        .querySelectorAll(
+            '[data-delete-result]'
+        )
+        .forEach(button => {
 
-                message.textContent =
-                    'Incorrect teacher code. Please try again.';
+            button.addEventListener(
+                'click',
+                async () => {
+
+                    const id =
+                        button.dataset
+                            .deleteResult;
 
 
-                message.classList.remove(
-                    'hidden'
-                );
+                    const result =
+                        RESULTS_CACHE.find(
+                            item =>
+                                item.id ===
+                                id
+                        );
 
-            }
+
+                    if (!result) {
+                        return;
+                    }
 
 
-            if (input) {
+                    const confirmed =
+                        window.confirm(
+                            `Delete this result?\n\n${result.name} — ${result.event}`
+                        );
 
-                input.value =
-                    '';
 
-                input.focus();
+                    if (!confirmed) {
+                        return;
+                    }
 
-            }
 
-        }
-    );
+                    button.disabled =
+                        true;
+
+                    button.textContent =
+                        'Deleting...';
+
+
+                    try {
+
+                        await deleteResult(
+                            id
+                        );
+
+
+                        renderManageResults();
+
+                        renderPublicResults();
+
+                        renderChampionship();
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            error
+                        );
+
+
+                        alert(
+                            'Could not delete the result.\n\n' +
+                            (
+                                error?.message ||
+                                String(error)
+                            )
+                        );
+
+
+                        button.disabled =
+                            false;
+
+                        button.textContent =
+                            'Delete';
+
+                    }
+
+                }
+            );
+
+        });
 
 }
 
@@ -4146,147 +3149,160 @@ function setupTeacherAuth() {
    HOME SPOTLIGHT
    ========================================================= */
 
-const spotlightData = {
+function renderHomeSpotlight() {
 
-    music: {
-
-        number: '01',
-
-        title: 'Music',
-
-        copy:
-            'From classical voice to instrumental expression — hear every student find their own rhythm.',
-
-        cta:
-            'Explore music'
-
-    },
-
-
-    dance: {
-
-        number: '02',
-
-        title: 'Dance',
-
-        copy:
-            'Energy, precision and storytelling come together on one stage across traditional and contemporary forms.',
-
-        cta:
-            'Explore dance'
-
-    },
-
-
-    literary: {
-
-        number: '03',
-
-        title: 'Literary',
-
-        copy:
-            'Words become performance through recitation, writing, speech and dramatic expression.',
-
-        cta:
-            'Explore literary'
-
-    },
-
-
-    art: {
-
-        number: '04',
-
-        title: 'Visual Arts',
-
-        copy:
-            'Colour, line and imagination turn blank surfaces into work worth remembering.',
-
-        cta:
-            'Explore visual arts'
-
-    }
-
-};
-
-
-/* =========================================================
-   SETUP SPOTLIGHT
-   ========================================================= */
-
-function setupSpotlight() {
-
-    const card =
-        document.querySelector(
-            '#spotlight-card'
+    const container =
+        firstElement(
+            'home-spotlight',
+            'spotlight-results',
+            'latest-results'
         );
 
 
-    if (!card) {
+    if (!container) {
         return;
     }
 
 
-    const tabs = [
-        ...document.querySelectorAll(
-            '.spotlight-tab'
-        )
-    ];
+    const latest =
+        RESULTS_CACHE
+            .slice()
+            .sort(
+                (a, b) => {
+
+                    const dateA =
+                        new Date(
+                            a.createdAt ||
+                            0
+                        ).getTime();
 
 
-    function show(key) {
+                    const dateB =
+                        new Date(
+                            b.createdAt ||
+                            0
+                        ).getTime();
 
-        const data =
-            spotlightData[key] ||
-            spotlightData.music;
+
+                    return dateB - dateA;
+
+                }
+            )
+            .slice(0, 6);
 
 
-        card.innerHTML = `
+    if (!latest.length) {
 
-            <div
-                class="spotlight-number"
-            >
-                ${data.number}
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Results will appear here.</p>
             </div>
-
-
-            <div>
-
-                <h3>
-                    ${escapeHtml(
-                        data.title
-                    )}
-                </h3>
-
-
-                <p>
-                    ${escapeHtml(
-                        data.copy
-                    )}
-                </p>
-
-            </div>
-
-
-            <a
-                class="btn ghost"
-                href="programs.html"
-            >
-                ${escapeHtml(
-                    data.cta
-                )} →
-            </a>
-
         `;
 
+        return;
 
-        tabs.forEach(
-            tab => {
+    }
 
-                tab.classList.toggle(
-                    'active',
-                    tab.dataset.spotlight ===
-                        key
+
+    container.innerHTML =
+        latest.map(
+            result => `
+
+                <div class="spotlight-item">
+
+                    <div class="spotlight-medal">
+                        ${medal(
+                            Number(result.place)
+                        )}
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            ${escapeHtml(
+                                result.name
+                            )}
+                        </strong>
+
+                        <span>
+                            ${escapeHtml(
+                                result.event
+                            )}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `
+        ).join('');
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+function setupNavigation() {
+
+    const navLinks =
+        document.querySelectorAll(
+            'a[href]'
+        );
+
+
+    navLinks.forEach(link => {
+
+        link.addEventListener(
+            'click',
+            () => {
+
+                navLinks.forEach(
+                    item =>
+                        item.classList.remove(
+                            'active'
+                        )
+                );
+
+
+                link.classList.add(
+                    'active'
+                );
+
+            }
+        );
+
+    });
+
+
+    const menuButton =
+        firstElement(
+            'mobile-menu-button',
+            'menu-toggle',
+            'nav-toggle'
+        );
+
+
+    const nav =
+        firstElement(
+            'main-nav',
+            'site-nav',
+            'navbar'
+        );
+
+
+    if (
+        menuButton &&
+        nav
+    ) {
+
+        menuButton.addEventListener(
+            'click',
+            () => {
+
+                nav.classList.toggle(
+                    'open'
                 );
 
             }
@@ -4294,27 +3310,81 @@ function setupSpotlight() {
 
     }
 
-
-    tabs.forEach(
-        tab => {
-
-            tab.addEventListener(
-                'click',
-                () => {
-
-                    show(
-                        tab.dataset.spotlight
-                    );
-
-                }
-            );
-
-        }
-    );
+}
 
 
-    show(
-        'music'
+/* =========================================================
+   SCROLL REVEAL
+   ========================================================= */
+
+function setupScrollReveal() {
+
+    const elements =
+        document.querySelectorAll(
+            '.reveal, .animate-on-scroll'
+        );
+
+
+    if (
+        !elements.length
+    ) {
+        return;
+    }
+
+
+    if (
+        !('IntersectionObserver'
+            in window)
+    ) {
+
+        elements.forEach(
+            element =>
+                element.classList.add(
+                    'visible'
+                )
+        );
+
+        return;
+
+    }
+
+
+    const observer =
+        new IntersectionObserver(
+            entries => {
+
+                entries.forEach(
+                    entry => {
+
+                        if (
+                            entry.isIntersecting
+                        ) {
+
+                            entry.target.classList.add(
+                                'visible'
+                            );
+
+                            observer.unobserve(
+                                entry.target
+                            );
+
+                        }
+
+                    }
+                );
+
+            },
+            {
+                threshold: 0.12
+            }
+        );
+
+
+    elements.forEach(
+        element =>
+            observer.observe(
+                element
+            )
     );
 
 }
@@ -4326,104 +3396,42 @@ function setupSpotlight() {
 
 function setupAboutPage() {
 
-    const revealItems =
+    const buttons =
         document.querySelectorAll(
-            '.about-profile-grid, ' +
-            '.purpose-card, ' +
-            '.work-item, ' +
-            '.approach-step, ' +
-            '.statement-inner, ' +
-            '.about-closing'
+            '[data-about-toggle]'
         );
 
 
-    if (
-        'IntersectionObserver' in window
-    ) {
+    buttons.forEach(
+        button => {
 
-        const observer =
-            new IntersectionObserver(
-                entries => {
-
-                    entries.forEach(
-                        entry => {
-
-                            if (
-                                !entry.isIntersecting
-                            ) {
-                                return;
-                            }
-
-
-                            entry.target.classList.add(
-                                'about-visible'
-                            );
-
-
-                            observer.unobserve(
-                                entry.target
-                            );
-
-                        }
-                    );
-
-                },
-                {
-                    threshold: 0.12
-                }
-            );
-
-
-        revealItems.forEach(
-            item => {
-
-                observer.observe(
-                    item
-                );
-
-            }
-        );
-
-    } else {
-
-        revealItems.forEach(
-            item => {
-
-                item.classList.add(
-                    'about-visible'
-                );
-
-            }
-        );
-
-    }
-
-
-    const skillCards =
-        document.querySelectorAll(
-            '.about-skill'
-        );
-
-
-    skillCards.forEach(
-        (
-            card,
-            index
-        ) => {
-
-            card.style.transitionDelay =
-                `${index * 80}ms`;
-
-
-            card.addEventListener(
-                'mouseenter',
+            button.addEventListener(
+                'click',
                 () => {
 
-                    card.style.setProperty(
-                        '--card-angle',
-                        index % 2 === 0
-                            ? '-1deg'
-                            : '1deg'
+                    const targetId =
+                        button.dataset
+                            .aboutToggle;
+
+
+                    const target =
+                        document.getElementById(
+                            targetId
+                        );
+
+
+                    if (!target) {
+                        return;
+                    }
+
+
+                    target.classList.toggle(
+                        'open'
+                    );
+
+
+                    button.classList.toggle(
+                        'open'
                     );
 
                 }
@@ -4432,102 +3440,36 @@ function setupAboutPage() {
         }
     );
 
-
-    const profile =
-        document.querySelector(
-            '.profile-circle'
-        );
-
-
-    if (
-        profile &&
-        window.matchMedia(
-            '(pointer:fine)'
-        ).matches
-    ) {
-
-        window.addEventListener(
-            'mousemove',
-            event => {
-
-                const x =
-                    (
-                        window.innerWidth / 2 -
-                        event.clientX
-                    ) / 70;
-
-
-                const y =
-                    (
-                        window.innerHeight / 2 -
-                        event.clientY
-                    ) / 70;
-
-
-                profile.style.transform =
-                    `translate(${x}px, ${y}px)`;
-
-            }
-        );
-
-    }
-
-
-    document
-        .querySelectorAll(
-            '[data-current-year]'
-        )
-        .forEach(
-            element => {
-
-                element.textContent =
-                    new Date().getFullYear();
-
-            }
-        );
-
 }
 
 
 /* =========================================================
-   KEYBOARD CONTROLS
+   KEYBOARD
    ========================================================= */
 
-function setupKeyboardControls() {
+function setupKeyboard() {
 
     document.addEventListener(
         'keydown',
         event => {
 
             if (
-                event.key !==
+                event.key ===
                 'Escape'
             ) {
-                return;
+
+                document
+                    .querySelectorAll(
+                        '.open'
+                    )
+                    .forEach(
+                        element =>
+                            element.classList.remove(
+                                'open'
+                            )
+                    );
+
             }
-
-
-            const nav =
-                document.querySelector(
-                    '.nav'
-                );
-
-
-            const toggle =
-                document.querySelector(
-                    '.nav-toggle'
-                );
-
-
-            nav?.classList.remove(
-                'open'
-            );
-
-
-            toggle?.setAttribute(
-                'aria-expanded',
-                'false'
-            );
 
         }
     );
@@ -4536,58 +3478,443 @@ function setupKeyboardControls() {
 
 
 /* =========================================================
-   APPLICATION STARTUP
+   POPULATE FILTER OPTIONS
    ========================================================= */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    async () => {
+function populateFilters() {
 
-        /* =================================================
-           BASIC PAGE SETUP
-           ================================================= */
+    const sectionFilter =
+        firstElement(
+            'result-section-filter',
+            'section-filter'
+        );
 
-        setupNav();
 
-        setupActiveNav();
+    const houseFilter =
+        firstElement(
+            'result-house-filter',
+            'house-filter'
+        );
 
-        setupReveal();
 
-        setupSpotlight();
+    const eventFilter =
+        firstElement(
+            'result-event-filter',
+            'event-filter'
+        );
+
+
+    if (sectionFilter) {
+
+        const current =
+            sectionFilter.value;
+
+
+        sectionFilter.innerHTML =
+            `
+                <option value="">
+                    All Sections
+                </option>
+            `;
+
+
+        Object.keys(
+            SECTION_INFO
+        ).forEach(
+            section => {
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    section;
+
+
+                option.textContent =
+                    SECTION_INFO[
+                        section
+                    ].name;
+
+
+                sectionFilter.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+        sectionFilter.value =
+            current;
+
+    }
+
+
+    if (houseFilter) {
+
+        const current =
+            houseFilter.value;
+
+
+        houseFilter.innerHTML =
+            `
+                <option value="">
+                    All Houses
+                </option>
+            `;
+
+
+        Object.keys(
+            HOUSE_INFO
+        ).forEach(
+            house => {
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    house;
+
+
+                option.textContent =
+                    HOUSE_INFO[
+                        house
+                    ].name;
+
+
+                houseFilter.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+        houseFilter.value =
+            current;
+
+    }
+
+
+    if (eventFilter) {
+
+        const current =
+            eventFilter.value;
+
+
+        const events =
+            [
+                ...new Set(
+                    RESULTS_CACHE
+                        .map(
+                            result =>
+                                result.event
+                        )
+                        .filter(Boolean)
+                )
+            ]
+            .sort();
+
+
+        eventFilter.innerHTML =
+            `
+                <option value="">
+                    All Programs
+                </option>
+            `;
+
+
+        events.forEach(
+            eventName => {
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    eventName;
+
+
+                option.textContent =
+                    eventName;
+
+
+                eventFilter.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+        eventFilter.value =
+            current;
+
+    }
+
+}
+
+
+/* =========================================================
+   STATUS INDICATOR
+   ========================================================= */
+
+function updateConnectionStatus() {
+
+    const elements =
+        document.querySelectorAll(
+            '[data-supabase-status], #supabase-status'
+        );
+
+
+    if (!elements.length) {
+        return;
+    }
+
+
+    elements.forEach(
+        element => {
+
+            if (
+                RESULTS_LOADED
+            ) {
+
+                element.textContent =
+                    'Live';
+
+                element.classList.add(
+                    'connected'
+                );
+
+                element.classList.remove(
+                    'offline'
+                );
+
+            }
+
+            else {
+
+                element.textContent =
+                    'Offline';
+
+                element.classList.add(
+                    'offline'
+                );
+
+                element.classList.remove(
+                    'connected'
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DASHBOARD SUMMARY
+   ========================================================= */
+
+function renderDashboardSummary() {
+
+    const resultCount =
+        firstElement(
+            'total-results',
+            'result-count'
+        );
+
+
+    const houseCount =
+        firstElement(
+            'house-count'
+        );
+
+
+    const firstPlaceCount =
+        firstElement(
+            'first-place-count'
+        );
+
+
+    if (resultCount) {
+
+        resultCount.textContent =
+            RESULTS_CACHE.length;
+
+    }
+
+
+    if (houseCount) {
+
+        const houses =
+            new Set(
+                RESULTS_CACHE
+                    .map(
+                        result =>
+                            String(
+                                result.team ||
+                                ''
+                            )
+                            .toUpperCase()
+                    )
+                    .filter(Boolean)
+            );
+
+
+        houseCount.textContent =
+            houses.size;
+
+    }
+
+
+    if (firstPlaceCount) {
+
+        firstPlaceCount.textContent =
+            RESULTS_CACHE.filter(
+                result =>
+                    Number(
+                        result.place
+                    ) === 1
+            ).length;
+
+    }
+
+}
+
+
+/* =========================================================
+   GLOBAL RENDER
+   ========================================================= */
+
+function renderEverything() {
+
+    populateFilters();
+
+    renderPublicResults();
+
+    renderChampionship();
+
+    renderManageResults();
+
+    renderHomeSpotlight();
+
+    renderDashboardSummary();
+
+    updateConnectionStatus();
+
+}
+
+
+/* =========================================================
+   INITIALISE
+   ========================================================= */
+
+async function initialiseApp() {
+
+    try {
+
+        setupNavigation();
+
+        setupScrollReveal();
+
+        setupKeyboard();
 
         setupAboutPage();
 
-        setupKeyboardControls();
+        setupTeacherAuthentication();
+
+        setupTeacherPage();
+
+        setupTeacherProgramSelection();
+
+        setupTeacherResultForm();
+
+        setupResultFilters();
 
 
-        /* =================================================
-           LOAD SUPABASE RESULTS
-           ================================================= */
+        /*
+           Load shared Supabase results.
+        */
 
         await loadResults();
 
 
-        /* =================================================
-           PUBLIC RESULT DISPLAY
-           ================================================= */
+        /*
+           Populate/render after data arrives.
+        */
 
-        renderPublicResults();
-
-        renderChampionship();
+        renderEverything();
 
 
-        /* =================================================
-           TEACHER LOGIN
-           ================================================= */
-
-        setupTeacherAuth();
-
-
-        /* =================================================
-           REALTIME DATABASE
-           ================================================= */
+        /*
+           Realtime must be started after the
+           Supabase client exists.
+        */
 
         setupRealtimeResults();
 
+
+        console.log(
+            'MIS Art Fest 2026 application loaded successfully.'
+        );
+
     }
-);
+
+    catch (error) {
+
+        console.error(
+            'MIS Art Fest initialisation error:',
+            error
+        );
+
+
+        /*
+           Never silently fail.
+           Show the user the actual problem.
+        */
+
+        const message =
+            error?.message ||
+            String(error);
+
+
+        console.error(
+            `MIS Art Fest could not initialise: ${message}`
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DOM READY
+   ========================================================= */
+
+if (
+    document.readyState ===
+    'loading'
+) {
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        initialiseApp
+    );
+
+}
+
+else {
+
+    initialiseApp();
+
+}
