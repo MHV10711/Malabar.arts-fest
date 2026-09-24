@@ -4712,4 +4712,3 @@ document.addEventListener(
 
     }
 );
-data-program="${escapeHtml(item.event)}"
