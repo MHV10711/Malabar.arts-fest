@@ -322,7 +322,7 @@ const PROGRAMS = {
                 type: 'individual'
             },
         ]
-
+    },
     
 
 
