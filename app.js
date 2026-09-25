@@ -312,10 +312,7 @@ const PROGRAMS = {
                 type: 'individual'
             },
 
-            {
-                name: 'Essay Writing — English',
-                type: 'individual'
-            },
+            
            
             {
                 name: 'Collage',
