@@ -312,16 +312,16 @@ const PROGRAMS = {
                 type: 'individual'
             },
 
-            
+             {
+                name: 'Story Writing — Arabic',
+                type: 'individual'
+            },
            
             {
                 name: 'Collage',
                 type: 'individual'
             },
-            {
-                name: 'Story Writing — Arabic',
-                type: 'individual'
-            },
+           
         ]
     },
     
