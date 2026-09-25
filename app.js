@@ -303,7 +303,7 @@ const PROGRAMS = {
             },
 
             {
-                name: 'Story Writing — English',
+                name: 'Essay writing Writing — English',
                 type: 'individual'
             },
 
