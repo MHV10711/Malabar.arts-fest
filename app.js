@@ -1,6 +1,6 @@
 /* =========================================================
    MIS ART FEST 2026
-   MAIN JAVASCRIPT
+   MAIN JAVASCRIPT 
    CLEAN + FIXED SUPABASE VERSION
    ========================================================= */
  
