@@ -312,27 +312,26 @@ const PROGRAMS = {
                 type: 'individual'
             },
 
-              {
+            {
                 name: 'Story Writing — Arabic',
                 type: 'individual'
             },
-           
+
             {
                 name: 'Collage',
                 type: 'individual'
-            },
-           
+            }
+
         ]
     },
-    
-
 
     /* =====================================================
        ON-STAGE
        ===================================================== */
 
     'on-stage': {
-            LP-1: [
+
+        LP1: [
 
             {
                 name: 'Malayalam poem',
@@ -382,10 +381,13 @@ const PROGRAMS = {
             {
                 name: 'Folks dance',
                 type: 'individual'
-            },
+            }
 
-          ],
-       UP: [
+        ],
+
+        LP2: [],
+
+        UP: [
 
             {
                 name: 'Speech — Malayalam',
@@ -744,10 +746,28 @@ function stageLabel(stage) {
 }
 
 
+function normaliseSectionKey(section) {
+
+    const value =
+        String(section ?? '')
+            .trim();
+
+    if (!value) {
+        return value;
+    }
+
+    return value
+        .replace(/^LP-/, 'LP');
+
+}
+
+
 function sectionLabel(section) {
 
     return (
-        SECTION_INFO[section]?.label ||
+        SECTION_INFO[
+            normaliseSectionKey(section)
+        ]?.label ||
         section ||
         '—'
     );
@@ -758,7 +778,9 @@ function sectionLabel(section) {
 function sectionFullName(section) {
 
     return (
-        SECTION_INFO[section]?.full ||
+        SECTION_INFO[
+            normaliseSectionKey(section)
+        ]?.full ||
         section ||
         '—'
     );
@@ -860,9 +882,11 @@ function normaliseResult(item) {
             ),
 
         section:
-            String(
-                item.section ||
-                'HS'
+            normaliseSectionKey(
+                String(
+                    item.section ||
+                    'HS'
+                )
             ),
 
         activityType:
@@ -2559,7 +2583,9 @@ function sectionProgramCard(
 ) {
 
     const info =
-        SECTION_INFO[section];
+        SECTION_INFO[
+            normaliseSectionKey(section)
+        ];
 
 
     return `
@@ -2766,10 +2792,18 @@ function teacherDashboard() {
 
 
     const onStageCount =
-        PROGRAMS['on-stage'].UP.length +
-        PROGRAMS['on-stage'].HS.length +
-        PROGRAMS['on-stage'].HSS.length +
-        PROGRAMS['on-stage'].GENERAL.length;
+        Object.values(
+            PROGRAMS['on-stage']
+        )
+            .reduce(
+                (
+                    total,
+                    list
+                ) =>
+                    total +
+                    list.length,
+                0
+            );
 
 
     section.innerHTML = `
@@ -2956,6 +2990,20 @@ function teacherDashboard() {
 
                     ${sectionProgramCard(
                         'on-stage',
+                        'LP1',
+                        PROGRAMS['on-stage'].LP1 || []
+                    )}
+
+
+                    ${sectionProgramCard(
+                        'on-stage',
+                        'LP2',
+                        PROGRAMS['on-stage'].LP2 || []
+                    )}
+
+
+                    ${sectionProgramCard(
+                        'on-stage',
                         'UP',
                         PROGRAMS['on-stage'].UP
                     )}
@@ -3123,7 +3171,7 @@ function setupTeacherProgramButtons() {
                             PROGRAMS[
                                 stage
                             ]?.[
-                                section
+                                normaliseSectionKey(section)
                             ];
 
 
@@ -3143,7 +3191,7 @@ function setupTeacherProgramButtons() {
 
                         openTeacherResultEntry(
                             stage,
-                            section,
+                            normaliseSectionKey(section),
                             program
                         );
 
