@@ -735,13 +735,13 @@ function escapeHtml(value) {
     return String(
         value ?? ''
     ).replace(
-        /[&<>'"]/g,
+        /[&<>"']/g,
         character => ({
             '&': '&amp;',
             '<': '&lt;',
             '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
+            '"': '&quot;',
+            "'": '&#39;'
         }[character])
     );
 
@@ -836,6 +836,16 @@ function sectionFullName(section) {
         section ||
         '—'
     );
+
+}
+
+
+function requiresHouseSelection(section) {
+
+    const normalised =
+        normaliseSectionKey(section);
+
+    return !['LP1', 'LP2'].includes(normalised);
 
 }
 
@@ -1784,8 +1794,10 @@ function renderPublicResults() {
                 item => {
 
                     const house =
-                        HOUSE_INFO[item.team] ||
-                        HOUSE_INFO.red;
+                        item.team
+                            ? HOUSE_INFO[item.team] ||
+                              HOUSE_INFO.red
+                            : null;
 
 
                     return `
@@ -1851,14 +1863,20 @@ function renderPublicResults() {
                             </div>
 
 
-                            <span
-                                class="
-                                    team-tag
-                                    ${house.tag}
-                                "
-                            >
-                                ${house.name}
-                            </span>
+                            ${
+                                house
+                                    ? `
+                                        <span
+                                            class="
+                                                team-tag
+                                                ${house.tag}
+                                            "
+                                        >
+                                            ${house.name}
+                                        </span>
+                                    `
+                                    : ''
+                            }
 
 
                             <span class="result-type">
@@ -2218,6 +2236,7 @@ function pointsByHouse() {
         item => {
 
             if (
+                item.team &&
                 totals[item.team] !==
                 undefined
             ) {
@@ -3290,6 +3309,9 @@ function openTeacherResultEntry(
         program.maxParticipants ||
         null;
 
+    const showHouseField =
+        requiresHouseSelection(section);
+
 
     container.innerHTML = `
 
@@ -3425,39 +3447,45 @@ function openTeacherResultEntry(
                     >
 
 
-                    <label>
+                    ${
+                        showHouseField
+                            ? `
+                                <label>
 
-                        House
+                                    House
 
 
-                        <select
-                            name="team"
-                            required
-                        >
+                                    <select
+                                        name="team"
+                                        required
+                                    >
 
-                            <option value="">
-                                Select house
-                            </option>
+                                        <option value="">
+                                            Select house
+                                        </option>
 
-                            <option value="red">
-                                RED
-                            </option>
+                                        <option value="red">
+                                            RED
+                                        </option>
 
-                            <option value="green">
-                                GREEN
-                            </option>
+                                        <option value="green">
+                                            GREEN
+                                        </option>
 
-                            <option value="blue">
-                                BLUE
-                            </option>
+                                        <option value="blue">
+                                            BLUE
+                                        </option>
 
-                            <option value="yellow">
-                                YELLOW
-                            </option>
+                                        <option value="yellow">
+                                            YELLOW
+                                        </option>
 
-                        </select>
+                                    </select>
 
-                    </label>
+                                </label>
+                            `
+                            : ''
+                    }
 
 
                     <label>
@@ -3740,6 +3768,12 @@ async function submitTeacherResult(
     const program =
         selectedTeacherProgram.program;
 
+    const section =
+        selectedTeacherProgram.section;
+
+    const requiresTeam =
+        requiresHouseSelection(section);
+
 
     const name =
         String(
@@ -3819,6 +3853,7 @@ async function submitTeacherResult(
 
 
     if (
+        requiresTeam &&
         ![
             'red',
             'green',
@@ -3903,7 +3938,7 @@ async function submitTeacherResult(
             studentClass,
 
         section:
-            selectedTeacherProgram.section,
+            section,
 
         activityType:
             program.type === 'group'
@@ -3917,7 +3952,9 @@ async function submitTeacherResult(
             program.name,
 
         team:
-            team,
+            requiresTeam
+                ? team
+                : '',
 
         place:
             place,
@@ -4138,8 +4175,10 @@ function renderManageResults() {
                 item => {
 
                     const house =
-                        HOUSE_INFO[item.team] ||
-                        HOUSE_INFO.red;
+                        item.team
+                            ? HOUSE_INFO[item.team] ||
+                              HOUSE_INFO.red
+                            : null;
 
 
                     const points =
@@ -4217,14 +4256,20 @@ function renderManageResults() {
                             </div>
 
 
-                            <span
-                                class="
-                                    team-tag
-                                    ${house.tag}
-                                "
-                            >
-                                ${house.label}
-                            </span>
+                            ${
+                                house
+                                    ? `
+                                        <span
+                                            class="
+                                                team-tag
+                                                ${house.tag}
+                                            "
+                                        >
+                                            ${house.label}
+                                        </span>
+                                    `
+                                    : ''
+                            }
 
 
                             <strong
