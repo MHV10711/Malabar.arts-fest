@@ -385,7 +385,59 @@ const PROGRAMS = {
 
         ],
 
-        LP2: [],
+        LP2: [
+          {
+                name: 'Malayalam poem',
+                type: 'individual'
+            },
+
+            {
+                name: 'Poem recitation eng',
+                type: 'individual'
+            },
+
+            {
+                name: 'Speech English',
+                type: 'individual'
+            },
+
+            {
+                name: 'Mono Act',
+                type: 'individual'
+            },
+
+            {
+                name: 'Speech Malayalam',
+                type: 'individual'
+            },
+
+            {
+                name: 'Story Telling Malayalam',
+                type: 'individual'
+            },
+
+            {
+                name: 'Group song',
+                type: 'group'
+            },
+
+            {
+                name: 'Light Music',
+                type: 'individual'
+            },
+
+            {
+                name: 'Mappilappattu',
+                type: 'individual'
+            },
+
+            {
+                name: 'story Telling English',
+                type: 'individual'
+            }
+
+           
+        ],
 
         UP: [
 
