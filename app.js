@@ -589,7 +589,7 @@ const PROGRAMS = {
 
             {
                 name: 'Nadanpattu',
-                type: 'individual'
+                type: 'group'
             },
 
             {
