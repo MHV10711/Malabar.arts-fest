@@ -149,11 +149,31 @@ const PROGRAMS = {
             {
                 name: 'Hand Writing — English',
                 type: 'individual'
+            },
+
+            {
+                name: 'Memory Test',
+                type: 'individual'
+            },
+
+            {
+                name: 'Drawing',
+                type: 'individual'
             }
 
         ],
 
         LP2: [
+
+            {
+                name: 'Hand Writing — English',
+                type: 'individual'
+            },
+
+            {
+                name: 'Hand Writing — Malayalam',
+                type: 'individual'
+            },
 
             {
                 name: 'Pencil Drawing',
@@ -434,9 +454,13 @@ const PROGRAMS = {
             {
                 name: 'story Telling English',
                 type: 'individual'
+            },
+
+            {
+                name: 'Folk dance',
+                type: 'individual'
             }
 
-           
         ],
 
         UP: [
@@ -500,6 +524,11 @@ const PROGRAMS = {
             },
 
             {
+                name: 'Poem Recitation — Urdu',
+                type: 'individual'
+            },
+
+            {
                 name: 'Speech — English',
                 type: 'individual'
             },
@@ -515,6 +544,11 @@ const PROGRAMS = {
 
             {
                 name: 'Group Song — Arabic',
+                type: 'group'
+            },
+
+            {
+                name: 'Group Song — Malayalam',
                 type: 'group'
             },
 
@@ -644,6 +678,11 @@ const PROGRAMS = {
 
             {
                 name: 'Poem Recitation — Malayalam',
+                type: 'individual'
+            },
+
+            {
+                name: 'Poem Recitation — Urdu',
                 type: 'individual'
             },
 
