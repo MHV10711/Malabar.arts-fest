@@ -332,8 +332,60 @@ const PROGRAMS = {
        ===================================================== */
 
     'on-stage': {
+            LP-1: [
 
-        UP: [
+            {
+                name: 'Malayalam poem',
+                type: 'individual'
+            },
+
+            {
+                name: 'Malayalam speech',
+                type: 'individual'
+            },
+
+            {
+                name: 'Story telling English',
+                type: 'individual'
+            },
+
+            {
+                name: 'English speech',
+                type: 'individual'
+            },
+
+            {
+                name: 'Action Song English',
+                type: 'individual'
+            },
+
+            {
+                name: 'Story Telling Malayalam',
+                type: 'individual'
+            },
+
+            {
+                name: 'Group song',
+                type: 'group'
+            },
+
+            {
+                name: 'English poem',
+                type: 'individual'
+            },
+
+            {
+                name: 'Mappilappattu',
+                type: 'individual'
+            },
+
+            {
+                name: 'Folks dance',
+                type: 'individual'
+            },
+
+          ],
+       UP: [
 
             {
                 name: 'Speech — Malayalam',
